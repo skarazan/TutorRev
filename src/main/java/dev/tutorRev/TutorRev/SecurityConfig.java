@@ -41,6 +41,11 @@ public class SecurityConfig {
     @Autowired
     private OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
+    // CORS origin — defaults to localhost:3000 for dev,
+    // set FRONTEND_URL env var in production (e.g. on Render)
+    @org.springframework.beans.factory.annotation.Value("${frontend.url:http://localhost:3000}")
+    private String frontendUrl;
+
     // This is the CENTRAL security configuration. It defines the entire
     // security behavior of your application.
     @Bean
@@ -170,7 +175,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedOrigins(List.of(frontendUrl));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(true);

@@ -36,6 +36,9 @@ public class OAuth2LoginSuccessHandler
     @Autowired
     private JwtUtil jwtUtil;
 
+    @org.springframework.beans.factory.annotation.Value("${frontend.url:http://localhost:3000}")
+    private String frontendUrl;
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
@@ -81,7 +84,7 @@ public class OAuth2LoginSuccessHandler
         // ⚠️ CHANGE THIS URL to match where your frontend is running!
         // If you don't have a frontend yet, you can change this to return
         // JSON instead — see the note below.
-        response.sendRedirect("http://localhost:3000/oauth2/callback?token=" + token);
+        response.sendRedirect(frontendUrl + "/oauth2/callback?token=" + token);
 
     }
 }

@@ -19,7 +19,8 @@ public class ReviewController {
     public ResponseEntity<Reviews> createReview(@RequestBody Map<String, String> payload,
                                                 Authentication authentication){
         String username = authentication.getName();
-        return new ResponseEntity<Reviews>(reviewService.createReview(payload.get("reviewBody"), payload.get("id"), username), HttpStatus.CREATED);
+        int rating = Integer.parseInt(payload.get("rating"));
+        return new ResponseEntity<Reviews>(reviewService.createReview(payload.get("reviewBody"), payload.get("id"), username, rating), HttpStatus.CREATED);
     }
 
     @DeleteMapping("/{reviewId}")

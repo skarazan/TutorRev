@@ -38,7 +38,7 @@ public class TutorialService {
     }
 
     @SuppressWarnings("unchecked")
-    public Tutorials createTutorial(String url, String reviewBody, String level, String username) {
+    public Tutorials createTutorial(String url, String reviewBody, String level, String username, int rating) {
         // Step 1: Extract YouTube video ID from the URL
         String videoId = extractVideoId(url);
         if (videoId == null) {
@@ -99,7 +99,7 @@ public class TutorialService {
         // This reuses your existing ReviewService.createReview() which:
         //   - inserts the review via reviewRepository.insert()
         //   - pushes the review into tutorial.reviewIds via mongoTemplate
-        reviewService.createReview(reviewBody, videoId, username);
+        reviewService.createReview(reviewBody, videoId, username, rating);
 
         // Step 9: Re-fetch to return the tutorial with the linked review populated
         return tutorialsRepository.findTutorialById(videoId).orElse(tutorial);

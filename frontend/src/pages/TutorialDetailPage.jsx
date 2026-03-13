@@ -4,6 +4,7 @@ import { getTutorial, deleteTutorial } from '../api/tutorials';
 import { createReview, deleteReview } from '../api/reviews';
 import { useAuth } from '../context/AuthContext';
 import LevelBadge from '../components/LevelBadge';
+import StarRating from '../components/StarRating';
 import ReviewItem from '../components/ReviewItem';
 import ReviewForm from '../components/ReviewForm';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -29,8 +30,8 @@ export default function TutorialDetailPage() {
     fetchTutorial();
   }, [id]);
 
-  async function handleReviewSubmit(reviewBody) {
-    await createReview(reviewBody, id);
+  async function handleReviewSubmit(reviewBody, rating) {
+    await createReview(reviewBody, id, rating);
     await fetchTutorial(); // Re-fetch to show the new review
   }
 
@@ -72,6 +73,12 @@ export default function TutorialDetailPage() {
   const topics = tutorial.topics?.[0] || [];
   const reviews = tutorial.reviewIds || [];
 
+  // Compute average rating (only from reviews that have a rating)
+  const ratedReviews = reviews.filter((r) => r.rating > 0);
+  const avgRating = ratedReviews.length > 0
+    ? ratedReviews.reduce((sum, r) => sum + r.rating, 0) / ratedReviews.length
+    : 0;
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* YouTube Embed */}
@@ -92,6 +99,17 @@ export default function TutorialDetailPage() {
           <span className="text-cream-300/60">{tutorial.channel}</span>
           <span className="text-dark-600">|</span>
           <LevelBadge level={tutorial.level} />
+          {avgRating > 0 && (
+            <>
+              <span className="text-dark-600">|</span>
+              <div className="flex items-center gap-1.5">
+                <StarRating value={Math.round(avgRating)} size="sm" />
+                <span className="text-cream-300/60 text-sm">
+                  {avgRating.toFixed(1)} ({ratedReviews.length})
+                </span>
+              </div>
+            </>
+          )}
           <span className="text-dark-600">|</span>
           <a
             href={tutorial.url}

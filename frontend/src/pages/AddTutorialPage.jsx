@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTutorial } from '../api/tutorials';
+import StarRating from '../components/StarRating';
 
 export default function AddTutorialPage() {
   const navigate = useNavigate();
   const [url, setUrl] = useState('');
   const [reviewBody, setReviewBody] = useState('');
   const [level, setLevel] = useState('Beginner');
+  const [rating, setRating] = useState(0);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -21,9 +23,14 @@ export default function AddTutorialPage() {
       return;
     }
 
+    if (rating === 0) {
+      setError('Please select a rating');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const res = await createTutorial(url, reviewBody, level);
+      const res = await createTutorial(url, reviewBody, level, rating);
       navigate(`/tutorials/${res.data.id}`);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add tutorial');
@@ -74,6 +81,12 @@ export default function AddTutorialPage() {
           </select>
         </div>
 
+        {/* Rating */}
+        <div>
+          <label className="block text-sm text-cream-300/80 mb-1">Rating</label>
+          <StarRating value={rating} onChange={setRating} />
+        </div>
+
         {/* Review */}
         <div>
           <label className="block text-sm text-cream-300/80 mb-1">Your Review</label>
@@ -90,7 +103,7 @@ export default function AddTutorialPage() {
         {/* Submit */}
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || rating === 0}
           className="w-full bg-coffee-500 hover:bg-coffee-400 text-cream-100 font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? 'Adding Tutorial...' : 'Add Tutorial'}

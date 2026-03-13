@@ -1,17 +1,20 @@
 import { useState } from 'react';
+import StarRating from './StarRating';
 
 export default function ReviewForm({ onSubmit }) {
   const [body, setBody] = useState('');
+  const [rating, setRating] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!body.trim()) return;
+    if (!body.trim() || rating === 0) return;
 
     setSubmitting(true);
     try {
-      await onSubmit(body.trim());
+      await onSubmit(body.trim(), rating);
       setBody('');
+      setRating(0);
     } finally {
       setSubmitting(false);
     }
@@ -19,6 +22,10 @@ export default function ReviewForm({ onSubmit }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
+      <div>
+        <label className="block text-sm text-cream-300/80 mb-1">Rating</label>
+        <StarRating value={rating} onChange={setRating} />
+      </div>
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
@@ -28,7 +35,7 @@ export default function ReviewForm({ onSubmit }) {
       />
       <button
         type="submit"
-        disabled={!body.trim() || submitting}
+        disabled={!body.trim() || rating === 0 || submitting}
         className="bg-coffee-500 hover:bg-coffee-400 text-cream-100 font-medium px-5 py-2 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {submitting ? 'Submitting...' : 'Submit Review'}

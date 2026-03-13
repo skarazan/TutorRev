@@ -16,8 +16,11 @@ public class ReviewService {
     @Autowired
     private TutorialsRepository tutorialsRepository;
 
-    public Reviews createReview(String reviewBody, String id, String username){
-        Reviews review = (Reviews) reviewRepository.insert(new Reviews(reviewBody, username));
+    public Reviews createReview(String reviewBody, String id, String username, int rating){
+        if (rating < 1 || rating > 5) {
+            throw new IllegalArgumentException("Rating must be between 1 and 5");
+        }
+        Reviews review = reviewRepository.insert(new Reviews(reviewBody, username, rating));
 
         mongoTemplate.update(Tutorials.class).matching(Criteria.where("id")
                 .is((id))).apply(new Update().push("reviewIds").value(review))

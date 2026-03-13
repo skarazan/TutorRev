@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import LevelBadge from './LevelBadge';
+import StarRating from './StarRating';
 
 export default function TutorialCard({ tutorial }) {
   // backdrops is List<String>[] — access inner array, pick best quality (last item)
@@ -10,7 +11,14 @@ export default function TutorialCard({ tutorial }) {
   const topics = tutorial.topics?.[0] || [];
   const displayTopics = topics.slice(0, 3);
 
-  const reviewCount = tutorial.reviewIds?.length || 0;
+  const reviews = tutorial.reviewIds || [];
+  const reviewCount = reviews.length;
+
+  // Average rating from reviews that have a rating (backwards compatible)
+  const ratedReviews = reviews.filter((r) => r.rating > 0);
+  const avgRating = ratedReviews.length > 0
+    ? Math.round(ratedReviews.reduce((sum, r) => sum + r.rating, 0) / ratedReviews.length)
+    : 0;
 
   return (
     <Link
@@ -38,6 +46,7 @@ export default function TutorialCard({ tutorial }) {
 
         <div className="flex items-center gap-2 mb-3">
           <LevelBadge level={tutorial.level} />
+          {avgRating > 0 && <StarRating value={avgRating} size="sm" />}
           <span className="text-cream-300/40 text-xs">
             {reviewCount} review{reviewCount !== 1 ? 's' : ''}
           </span>

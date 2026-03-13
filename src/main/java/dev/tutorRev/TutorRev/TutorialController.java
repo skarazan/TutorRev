@@ -34,12 +34,14 @@ public class TutorialController {
     public ResponseEntity<Tutorials> createTutorial(@RequestBody Map<String, String> payload,
                                                     Authentication authentication){
         String username = authentication.getName();
+        int rating = Integer.parseInt(payload.get("rating"));
         return new ResponseEntity<Tutorials>(
                 tutorialService.createTutorial(
                         payload.get("url"),
                         payload.get("reviewBody"),
                         payload.get("level"),
-                        username
+                        username,
+                        rating
                 ),
                 HttpStatus.CREATED
         );

@@ -21,6 +21,8 @@ public class Reviews {
 
     private String username;
 
+    private int rating;
+
     // Jackson serializes ObjectId as a complex object by default.
     // This getter ensures the JSON response has a clean string ID
     // like "683abc12def..." that the frontend can use in URLs.
@@ -29,8 +31,9 @@ public class Reviews {
         return id != null ? id.toHexString() : null;
     }
 
-    public Reviews(String review, String username) {
+    public Reviews(String review, String username, int rating) {
         this.body = review;
         this.username = username;
+        this.rating = rating;
     }
 }

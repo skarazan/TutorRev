@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import StarRating from './StarRating';
 
 export default function ReviewItem({ review, isAdmin, onDelete }) {
   const [deleting, setDeleting] = useState(false);
@@ -21,6 +22,7 @@ export default function ReviewItem({ review, isAdmin, onDelete }) {
             {review.username?.charAt(0)?.toUpperCase() || '?'}
           </div>
           <span className="text-sm font-medium text-coffee-300">{review.username || 'Anonymous'}</span>
+          {review.rating > 0 && <StarRating value={review.rating} size="sm" />}
         </div>
         {isAdmin && (
           <button

@@ -158,7 +158,3 @@ Improved UI and dashboard analytics
 
 Saba Karazanashvili
 Computer Science student focused on backend systems, distributed infrastructure, and scalable application design.
-
----
-
-If you want, I can also show you **3 things that would make this project look MUCH stronger to Amazon/Stripe/Coinbase recruiters**, because right now you’re about **2 small additions away from this looking like a serious production backend project.**

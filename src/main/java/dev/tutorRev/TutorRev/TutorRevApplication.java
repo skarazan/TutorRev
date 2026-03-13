@@ -4,7 +4,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -13,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 @SpringBootApplication
 //@EnableAutoConfiguration(exclude={MongoAutoConfiguration.class})
 
-@Controller
+@RestController
 public class TutorRevApplication {
 
 	public static void main(String[] args) {
@@ -22,7 +21,7 @@ public class TutorRevApplication {
 
 	private TutorialController tutorialController;
 	@GetMapping("/")
-	public String home(){
-		return "redirect/api/v1/auth";
+	public int apiRoot(){
+		return 7+10;
 	}
 }

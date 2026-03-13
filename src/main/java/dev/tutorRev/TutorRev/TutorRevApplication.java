@@ -21,7 +21,7 @@ public class TutorRevApplication {
 
 	private TutorialController tutorialController;
 	@GetMapping("/")
-	public int apiRoot(){
-		return 7+10;
+	public String home(){
+		return "redirect/api/v1/auth";
 	}
 }

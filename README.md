@@ -1,8 +1,3 @@
-Nice — since you already have a **live deployed instance**, we can include it directly in the README so anyone visiting your GitHub can try the app immediately.
-
-Here’s a **cleaner and more professional README** using your actual link.
-
----
 
 # TutorRev
 

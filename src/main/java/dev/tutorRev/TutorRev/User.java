@@ -8,6 +8,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -35,7 +36,9 @@ public class User {
 
     private String googleId;
 
+    private boolean emailVerified;
 
+    private String verificationCode;
 
-
+    private Instant verificationCodeExpiry;
 }

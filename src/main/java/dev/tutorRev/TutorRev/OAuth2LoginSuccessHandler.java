@@ -67,9 +67,16 @@ public class OAuth2LoginSuccessHandler
             newUser.setGoogleId(googleId);
             Set<Role> roles = new HashSet<>();
             roles.add(Role.ROLE_USER);  // Google users get ROLE_USER by default
+            newUser.setEmailVerified(true); // Google already verified their email
             newUser.setRoles(roles);
             return userRepository.save(newUser); // Save to MongoDB
         });
+
+        // Ensure existing Google users are also marked as verified
+        if (!user.isEmailVerified()) {
+            user.setEmailVerified(true);
+            userRepository.save(user);
+        }
 
         // Generate a JWT for this user — same token format as local login.
         // From this point on, the frontend uses this JWT for all API calls,

@@ -2,6 +2,7 @@ package dev.tutorRev.TutorRev;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.client.HttpClientErrorException;
@@ -30,6 +31,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleHttpClientError(HttpClientErrorException e) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(Map.of("error", "YouTube API error: " + e.getStatusCode()));
+    }
+
+    // Catches email sending failures
+    @ExceptionHandler(MailException.class)
+    public ResponseEntity<Map<String, String>> handleMailError(MailException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to send verification email. Please try again later."));
     }
 
     // Catches anything else unexpected

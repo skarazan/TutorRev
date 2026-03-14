@@ -11,3 +11,9 @@ export const logout = () =>
 
 export const getMe = () =>
   api.get('/api/v1/auth/me');
+
+export const verifyCode = (email, code) =>
+  api.post('/api/v1/auth/verify-code', { email, code });
+
+export const resendCode = (email) =>
+  api.post('/api/v1/auth/resend-code', { email });

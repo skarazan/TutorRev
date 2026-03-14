@@ -47,13 +47,8 @@ export function AuthProvider({ children }) {
 
   async function registerAction(username, email, password) {
     const res = await registerApi(username, email, password);
-    const { token: newToken, username: name } = res.data;
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('username', name);
-    setToken(newToken);
-
-    const meRes = await getMe();
-    setUser(meRes.data);
+    // Registration no longer returns a token — user must verify email first
+    return res.data; // { message, email }
   }
 
   async function handleOAuthToken(newToken) {

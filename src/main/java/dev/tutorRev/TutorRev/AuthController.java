@@ -1,5 +1,6 @@
 package dev.tutorRev.TutorRev;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,24 +12,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
-// This controller follows the SAME pattern as your ReviewController:
-// - @RestController (like ReviewController line 14)
-// - @RequestMapping with a base path (like ReviewController line 15)
-// - @Autowired services (like ReviewController line 18-19)
-// - @PostMapping methods with @RequestBody Map<String, String> (like ReviewController line 21-22)
-//
-// The base path "/api/v1/auth" keeps it consistent with your existing
-// "/api/v1/tutorials" and "/api/v1/reviews" URL structure.
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    // The AuthenticationManager is the Spring Security component that
-    // orchestrates the login process. We defined it as a @Bean in SecurityConfig.
     @Autowired
     private AuthenticationManager authenticationManager;
 
@@ -38,33 +33,43 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
-    // The PasswordEncoder (BCrypt) we defined in SecurityConfig.
-    // Used to hash the password before saving to MongoDB.
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private RateLimitService rateLimitService;
+
+    private final Random random = new Random();
+
+    private String generateVerificationCode() {
+        int code = 100000 + random.nextInt(900000); // 6-digit code
+        return String.valueOf(code);
+    }
+
     // =========================================================
     // REGISTER: POST /api/v1/auth/register
-    // Body: { "username": "saba", "email": "saba@email.com", "password": "mypass" }
-    //
-    // What it does:
-    // 1. Validates that all required fields are present
-    // 2. Checks MongoDB for duplicate username or email
-    // 3. Hashes the password with BCrypt (NEVER stores plain text)
-    // 4. Creates a new User document in the "users" collection
-    // 5. Generates a JWT so the user is immediately logged in
-    // 6. Returns the token and username
+    // Creates user, sends 6-digit verification code to email.
+    // Does NOT issue a JWT — user must verify email first.
     // =========================================================
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> register(@RequestBody Map<String, String> payload,
+                                       HttpServletRequest request) {
+        String clientIp = request.getRemoteAddr();
+        if (!rateLimitService.tryConsumeByIp("register", clientIp, 5, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many registration attempts. Please try again later."));
+        }
+
         String username = payload.get("username");
         String email = payload.get("email");
         String password = payload.get("password");
 
-        // Validate input — return 400 Bad Request if anything is missing
         if (username == null || email == null || password == null) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "username, email, and password are required"));
@@ -75,9 +80,6 @@ public class AuthController {
                     .body(Map.of("error", "Username contains inappropriate language"));
         }
 
-        // Check for duplicates BEFORE attempting to save.
-        // This gives the user a clear error message instead of a
-        // MongoDB duplicate key exception (which would be a 500 error).
         if (userRepository.existsByUsername(username)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", "Username already taken"));
@@ -88,62 +90,142 @@ public class AuthController {
                     .body(Map.of("error", "Email already registered"));
         }
 
-        // Build the User object
+        // Build and save user (unverified)
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);
-        // passwordEncoder.encode() runs BCrypt on the password.
-        // "mypass" becomes "$2a$10$N9qo8uLOickgx2ZMRZoMye..."
-        // Even if someone steals your database, they can't get the passwords.
         user.setPassword(passwordEncoder.encode(password));
-        user.setProvider("local"); // This is a username/password user, not Google
+        user.setProvider("local");
+        user.setEmailVerified(false);
+
         Set<Role> roles = new HashSet<>();
-        roles.add(Role.ROLE_USER); // New users get ROLE_USER by default
+        roles.add(Role.ROLE_USER);
         user.setRoles(roles);
 
-        // Save to MongoDB — creates a document in the "users" collection
+        // Generate 6-digit verification code
+        String code = generateVerificationCode();
+        user.setVerificationCode(code);
+        user.setVerificationCodeExpiry(Instant.now().plus(15, ChronoUnit.MINUTES));
+
         userRepository.save(user);
 
-        // Generate JWT immediately so the user doesn't have to log in
-        // separately after registering
-        String token = jwtUtil.generateToken(username);
+        // Send verification email
+        emailService.sendVerificationCode(email, code);
 
-        // Return 201 Created (same status you use in ReviewController line 24)
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of("token", token, "username", username));
+                .body(Map.of(
+                    "message", "Registration successful! Check your email for a verification code.",
+                    "email", email
+                ));
+    }
+
+    // =========================================================
+    // VERIFY CODE: POST /api/v1/auth/verify-code
+    // Body: { "email": "...", "code": "123456" }
+    // =========================================================
+    @PostMapping("/verify-code")
+    public ResponseEntity<?> verifyCode(@RequestBody Map<String, String> payload,
+                                         HttpServletRequest request) {
+        String clientIp = request.getRemoteAddr();
+        if (!rateLimitService.tryConsumeByIp("verify", clientIp, 5, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many verification attempts. Please try again later."));
+        }
+
+        String email = payload.get("email");
+        String code = payload.get("code");
+
+        if (email == null || code == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Email and code are required"));
+        }
+
+        User user = userRepository.findByEmailAndVerificationCode(email, code).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid verification code"));
+        }
+
+        if (user.getVerificationCodeExpiry().isBefore(Instant.now())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Verification code has expired. Please request a new one."));
+        }
+
+        user.setEmailVerified(true);
+        user.setVerificationCode(null);
+        user.setVerificationCodeExpiry(null);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(Map.of("message", "Email verified successfully! You can now log in."));
+    }
+
+    // =========================================================
+    // RESEND CODE: POST /api/v1/auth/resend-code
+    // Body: { "email": "..." }
+    // =========================================================
+    @PostMapping("/resend-code")
+    public ResponseEntity<?> resendCode(@RequestBody Map<String, String> payload,
+                                         HttpServletRequest request) {
+        String clientIp = request.getRemoteAddr();
+        if (!rateLimitService.tryConsumeByIp("resend", clientIp, 3, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many requests. Please try again later."));
+        }
+
+        String email = payload.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Email is required"));
+        }
+
+        // Intentionally vague response to prevent email enumeration
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user != null && !user.isEmailVerified()) {
+            String code = generateVerificationCode();
+            user.setVerificationCode(code);
+            user.setVerificationCodeExpiry(Instant.now().plus(15, ChronoUnit.MINUTES));
+            userRepository.save(user);
+            emailService.sendVerificationCode(email, code);
+        }
+
+        return ResponseEntity.ok(
+                Map.of("message", "If that email is registered, a new verification code has been sent."));
     }
 
     // =========================================================
     // LOGIN: POST /api/v1/auth/login
-    // Body: { "username": "saba", "password": "mypass" }
-    //
-    // What it does:
-    // 1. Passes credentials to Spring Security's AuthenticationManager
-    // 2. AuthenticationManager calls CustomUserDetailsService.loadUserByUsername()
-    // 3. It BCrypt-hashes the provided password and compares to the stored hash
-    // 4. If match → generates JWT token
-    // 5. If no match → returns 401 Unauthorized
     // =========================================================
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> login(@RequestBody Map<String, String> payload,
+                                    HttpServletRequest request) {
+        String clientIp = request.getRemoteAddr();
+        if (!rateLimitService.tryConsumeByIp("login", clientIp, 10, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many login attempts. Please try again later."));
+        }
+
         String username = payload.get("username");
         String password = payload.get("password");
 
         try {
-            // This single line does ALL the work:
-            // 1. Calls loadUserByUsername("saba") → gets UserDetails from MongoDB
-            // 2. Hashes the provided password with BCrypt
-            // 3. Compares the hash to the one stored in the database
-            // 4. If they don't match → throws BadCredentialsException
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password));
         } catch (BadCredentialsException e) {
-            // Wrong username or password — return 401
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Invalid username or password"));
         }
 
-        // If we get here, authentication succeeded. Generate a fresh JWT.
+        // Check email verification for local users
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user != null && "local".equals(user.getProvider()) && !user.isEmailVerified()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                        "error", "Please verify your email before logging in.",
+                        "email", user.getEmail()
+                    ));
+        }
+
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         String token = jwtUtil.generateToken(userDetails.getUsername());
 
@@ -152,15 +234,6 @@ public class AuthController {
 
     // =========================================================
     // LOGOUT: POST /api/v1/auth/logout
-    //
-    // Why is this so simple? Because JWT is STATELESS.
-    // The server doesn't store tokens anywhere — there's no session to
-    // invalidate. Logout happens on the CLIENT side by deleting the
-    // token from localStorage/cookies.
-    //
-    // This endpoint exists so your frontend has a consistent API to call.
-    // If you later want server-side token revocation, you'd add a
-    // "blacklist" collection in MongoDB and check it in JwtAuthFilter.
     // =========================================================
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
@@ -170,13 +243,6 @@ public class AuthController {
 
     // =========================================================
     // PROMOTE: PUT /api/v1/auth/promote/{username}
-    // Admin-only endpoint to give another user ROLE_ADMIN.
-    //
-    // Your FIRST admin must be created manually in MongoDB:
-    //   In MongoDB Compass, find your user document and change
-    //   "roles" from ["ROLE_USER"] to ["ROLE_USER", "ROLE_ADMIN"]
-    //
-    // After that, that admin can promote others using this endpoint.
     // =========================================================
     @PutMapping("/promote/{targetUsername}")
     public ResponseEntity<?> promoteToAdmin(@PathVariable String targetUsername) {
@@ -192,11 +258,9 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", targetUsername + " is now an admin"));
     }
 
-    // GET /api/v1/auth/me — returns the current user's profile.
-    // The frontend needs this to know who's logged in, their email,
-    // and what roles they have (to show/hide admin controls).
-    // Spring Security populates the Authentication object from the JWT
-    // via JwtAuthFilter, so we just read the username from it.
+    // =========================================================
+    // GET CURRENT USER: GET /api/v1/auth/me
+    // =========================================================
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
         String username = authentication.getName();

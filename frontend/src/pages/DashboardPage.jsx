@@ -5,6 +5,7 @@ import TutorialCard from '../components/TutorialCard';
 import TutorialFilters from '../components/TutorialFilters';
 import FeaturedCarousel from '../components/FeaturedCarousel';
 import LoadingSpinner from '../components/LoadingSpinner';
+import DevNotesPanel from '../components/DevNotesPanel';
 
 export default function DashboardPage() {
   const [tutorials, setTutorials] = useState([]);
@@ -104,79 +105,87 @@ export default function DashboardPage() {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-cream-100">Tutorials</h1>
-          <p className="text-cream-300/60 text-sm mt-1">
-            {tutorials.length} tutorial{tutorials.length !== 1 ? 's' : ''} shared by the community
-          </p>
-        </div>
-        <Link
-          to="/add-tutorial"
-          className="bg-coffee-500 hover:bg-coffee-400 text-cream-100 font-medium px-5 py-2 rounded-lg transition-colors text-sm"
-        >
-          + Add Tutorial
-        </Link>
-      </div>
-
-      {/* Featured Carousel */}
-      {featuredTutorials.length > 0 && (
-        <FeaturedCarousel tutorials={featuredTutorials} />
-      )}
-
-      {/* Search & Filters */}
-      {tutorials.length > 0 && (
-        <TutorialFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          selectedLevel={selectedLevel}
-          onLevelChange={setSelectedLevel}
-          availableTopics={availableTopics}
-          selectedTopics={selectedTopics}
-          onTopicToggle={handleTopicToggle}
-          onClearAll={handleClearAll}
-          resultCount={filteredTutorials.length}
-          totalCount={tutorials.length}
-        />
-      )}
-
-      {/* Error */}
-      {error && (
-        <div className="mb-6 p-4 bg-java-600/10 border border-java-600/30 rounded-lg text-java-400">
-          {error}
-        </div>
-      )}
-
-      {/* Grid */}
-      {tutorials.length === 0 && !error ? (
-        <div className="text-center py-20">
-          <p className="text-cream-300/40 text-lg mb-4">No tutorials yet</p>
+    <div className="flex flex-col xl:flex-row gap-6">
+      {/* Main content */}
+      <div className="flex-1 min-w-0">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-cream-100">Tutorials</h1>
+            <p className="text-cream-300/60 text-sm mt-1">
+              {tutorials.length} tutorial{tutorials.length !== 1 ? 's' : ''} shared by the community
+            </p>
+          </div>
           <Link
             to="/add-tutorial"
-            className="text-coffee-300 hover:text-coffee-400 underline"
+            className="bg-coffee-500 hover:bg-coffee-400 text-cream-100 font-medium px-5 py-2 rounded-lg transition-colors text-sm"
           >
-            Be the first to add one
+            + Add Tutorial
           </Link>
         </div>
-      ) : filteredTutorials.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-cream-300/40 text-lg mb-2">No tutorials match your filters</p>
-          <button
-            onClick={handleClearAll}
-            className="text-coffee-300 hover:text-coffee-400 underline text-sm"
-          >
-            Clear all filters
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredTutorials.map((tutorial) => (
-            <TutorialCard key={tutorial.id} tutorial={tutorial} />
-          ))}
-        </div>
-      )}
+
+        {/* Featured Carousel */}
+        {featuredTutorials.length > 0 && (
+          <FeaturedCarousel tutorials={featuredTutorials} />
+        )}
+
+        {/* Search & Filters */}
+        {tutorials.length > 0 && (
+          <TutorialFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedLevel={selectedLevel}
+            onLevelChange={setSelectedLevel}
+            availableTopics={availableTopics}
+            selectedTopics={selectedTopics}
+            onTopicToggle={handleTopicToggle}
+            onClearAll={handleClearAll}
+            resultCount={filteredTutorials.length}
+            totalCount={tutorials.length}
+          />
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="mb-6 p-4 bg-java-600/10 border border-java-600/30 rounded-lg text-java-400">
+            {error}
+          </div>
+        )}
+
+        {/* Grid */}
+        {tutorials.length === 0 && !error ? (
+          <div className="text-center py-20">
+            <p className="text-cream-300/40 text-lg mb-4">No tutorials yet</p>
+            <Link
+              to="/add-tutorial"
+              className="text-coffee-300 hover:text-coffee-400 underline"
+            >
+              Be the first to add one
+            </Link>
+          </div>
+        ) : filteredTutorials.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-cream-300/40 text-lg mb-2">No tutorials match your filters</p>
+            <button
+              onClick={handleClearAll}
+              className="text-coffee-300 hover:text-coffee-400 underline text-sm"
+            >
+              Clear all filters
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredTutorials.map((tutorial) => (
+              <TutorialCard key={tutorial.id} tutorial={tutorial} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Dev Notes Sidebar */}
+      <div className="xl:w-80 xl:flex-shrink-0 xl:sticky xl:top-20 xl:self-start">
+        <DevNotesPanel />
+      </div>
     </div>
   );
 }

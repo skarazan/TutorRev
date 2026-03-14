@@ -118,6 +118,18 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/reviews/**")
                         .hasAuthority("ROLE_ADMIN")
 
+                        // GET /api/v1/devnotes — all authenticated users can view
+                        .requestMatchers(HttpMethod.GET, "/api/v1/devnotes")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+
+                        // POST /api/v1/devnotes — admin only
+                        .requestMatchers(HttpMethod.POST, "/api/v1/devnotes")
+                        .hasAuthority("ROLE_ADMIN")
+
+                        // DELETE /api/v1/devnotes/{noteId} — admin only
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/devnotes/**")
+                        .hasAuthority("ROLE_ADMIN")
+
                         // Any other endpoint not listed above requires authentication.
                         // This is a safety net — if you add new endpoints later and
                         // forget to add rules here, they'll be protected by default.

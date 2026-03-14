@@ -9,5 +9,7 @@ const BLOCKED_WORDS = new Set([
 export function containsProfanity(text) {
   if (!text) return false;
   const words = text.toLowerCase().split(/[^a-zA-Z]+/);
-  return words.some((word) => BLOCKED_WORDS.has(word));
+  return words.some((word) =>
+    BLOCKED_WORDS.has(word) || [...BLOCKED_WORDS].some((bw) => word.includes(bw))
+  );
 }

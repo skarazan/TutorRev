@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getAllTutorials } from '../api/tutorials';
 import TutorialCard from '../components/TutorialCard';
 import TutorialFilters from '../components/TutorialFilters';
+import FeaturedCarousel from '../components/FeaturedCarousel';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function DashboardPage() {
@@ -70,6 +71,22 @@ export default function DashboardPage() {
     return result;
   }, [tutorials, searchQuery, selectedLevel, selectedTopics]);
 
+  // Top-rated tutorials for the featured carousel
+  const featuredTutorials = useMemo(() => {
+    return tutorials
+      .map((t) => {
+        const reviews = t.reviewIds || [];
+        const rated = reviews.filter((r) => r.rating > 0);
+        const avg = rated.length > 0
+          ? rated.reduce((sum, r) => sum + r.rating, 0) / rated.length
+          : 0;
+        return { ...t, _avgRating: avg, _ratedCount: rated.length };
+      })
+      .filter((t) => t._ratedCount >= 1)
+      .sort((a, b) => b._avgRating - a._avgRating)
+      .slice(0, 5);
+  }, [tutorials]);
+
   function handleTopicToggle(topic) {
     setSelectedTopics((prev) =>
       prev.includes(topic)
@@ -103,6 +120,11 @@ export default function DashboardPage() {
           + Add Tutorial
         </Link>
       </div>
+
+      {/* Featured Carousel */}
+      {featuredTutorials.length > 0 && (
+        <FeaturedCarousel tutorials={featuredTutorials} />
+      )}
 
       {/* Search & Filters */}
       {tutorials.length > 0 && (

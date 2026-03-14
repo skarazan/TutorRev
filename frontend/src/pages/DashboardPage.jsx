@@ -105,9 +105,13 @@ export default function DashboardPage() {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6">
-      {/* Main content */}
-      <div className="flex-1 min-w-0">
+    <>
+      {/* Dev Notes — fixed sidebar in the right margin, only on wide screens */}
+      <div className="hidden 2xl:block fixed top-20 right-4 w-72 z-40">
+        <DevNotesPanel />
+      </div>
+
+      <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -181,11 +185,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
-      {/* Dev Notes Sidebar */}
-      <div className="xl:w-80 xl:flex-shrink-0 xl:sticky xl:top-20 xl:self-start">
-        <DevNotesPanel />
-      </div>
-    </div>
+    </>
   );
 }

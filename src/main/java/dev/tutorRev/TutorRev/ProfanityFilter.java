@@ -26,6 +26,11 @@ public final class ProfanityFilter {
             if (BLOCKED_WORDS.contains(word)) {
                 return true;
             }
+            for (String blocked : BLOCKED_WORDS) {
+                if (word.contains(blocked)) {
+                    return true;
+                }
+            }
         }
         return false;
     }

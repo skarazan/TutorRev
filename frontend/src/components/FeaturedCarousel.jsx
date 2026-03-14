@@ -3,6 +3,54 @@ import { Link } from 'react-router-dom';
 import StarRating from './StarRating';
 import LevelBadge from './LevelBadge';
 
+function Slide({ tutorial }) {
+  const thumbnails = tutorial.backdrops?.[0] || [];
+  const thumbnail = thumbnails[thumbnails.length - 1] || thumbnails[0] || '';
+  const reviews = tutorial.reviewIds || [];
+  const ratedReviews = reviews.filter((r) => r.rating > 0);
+  const avgRating = ratedReviews.length > 0
+    ? ratedReviews.reduce((sum, r) => sum + r.rating, 0) / ratedReviews.length
+    : 0;
+
+  return (
+    <Link to={`/tutorials/${tutorial.id}`} className="block w-full flex-shrink-0">
+      <div className="relative aspect-[21/9] sm:aspect-[21/9] max-sm:aspect-video">
+        {thumbnail && (
+          <img
+            src={thumbnail}
+            alt={tutorial.title}
+            className="w-full h-full object-cover"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/60 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8">
+          <p className="text-coffee-300 text-xs font-medium uppercase tracking-wider mb-2">
+            Featured
+          </p>
+          <h2 className="text-cream-100 text-lg sm:text-2xl font-bold line-clamp-2 mb-2">
+            {tutorial.title}
+          </h2>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-cream-300/70">{tutorial.channel}</span>
+            <LevelBadge level={tutorial.level} />
+            {avgRating > 0 && (
+              <div className="flex items-center gap-1.5">
+                <StarRating value={Math.round(avgRating)} size="sm" />
+                <span className="text-cream-300/60 text-xs">
+                  {avgRating.toFixed(1)}
+                </span>
+              </div>
+            )}
+            <span className="text-cream-300/40 text-xs">
+              {reviews.length} review{reviews.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default function FeaturedCarousel({ tutorials }) {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -24,63 +72,23 @@ export default function FeaturedCarousel({ tutorials }) {
 
   if (!tutorials.length) return null;
 
-  const tutorial = tutorials[current];
-  const thumbnails = tutorial.backdrops?.[0] || [];
-  const thumbnail = thumbnails[thumbnails.length - 1] || thumbnails[0] || '';
-  const reviews = tutorial.reviewIds || [];
-  const ratedReviews = reviews.filter((r) => r.rating > 0);
-  const avgRating = ratedReviews.length > 0
-    ? ratedReviews.reduce((sum, r) => sum + r.rating, 0) / ratedReviews.length
-    : 0;
-
   return (
     <div
       className="relative mb-8 rounded-lg overflow-hidden bg-dark-800"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <Link to={`/tutorials/${tutorial.id}`} className="block">
-        {/* Background Image */}
-        <div className="relative aspect-[21/9] sm:aspect-[21/9] max-sm:aspect-video">
-          {thumbnail && (
-            <img
-              src={thumbnail}
-              alt={tutorial.title}
-              className="w-full h-full object-cover"
-            />
-          )}
+      {/* Sliding track */}
+      <div
+        className="flex transition-transform duration-500 ease-in-out"
+        style={{ transform: `translateX(-${current * 100}%)` }}
+      >
+        {tutorials.map((tutorial) => (
+          <Slide key={tutorial.id} tutorial={tutorial} />
+        ))}
+      </div>
 
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/60 to-transparent" />
-
-          {/* Content overlay */}
-          <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8">
-            <p className="text-coffee-300 text-xs font-medium uppercase tracking-wider mb-2">
-              Featured
-            </p>
-            <h2 className="text-cream-100 text-lg sm:text-2xl font-bold line-clamp-2 mb-2">
-              {tutorial.title}
-            </h2>
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              <span className="text-cream-300/70">{tutorial.channel}</span>
-              <LevelBadge level={tutorial.level} />
-              {avgRating > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <StarRating value={Math.round(avgRating)} size="sm" />
-                  <span className="text-cream-300/60 text-xs">
-                    {avgRating.toFixed(1)}
-                  </span>
-                </div>
-              )}
-              <span className="text-cream-300/40 text-xs">
-                {reviews.length} review{reviews.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
-        </div>
-      </Link>
-
-      {/* Arrow buttons (only if multiple slides) */}
+      {/* Arrow buttons */}
       {total > 1 && (
         <>
           <button

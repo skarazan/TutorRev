@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { containsProfanity } from '../utils/profanityFilter';
 
 export default function LoginPage() {
   const [activeTab, setActiveTab] = useState('login');
@@ -19,6 +20,12 @@ export default function LoginPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+
+    if (activeTab === 'register' && containsProfanity(username)) {
+      setError('Username contains inappropriate language');
+      return;
+    }
+
     setSubmitting(true);
 
     try {

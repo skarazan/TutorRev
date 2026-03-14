@@ -58,6 +58,18 @@ public class TutorialService {
         if (items == null || items.isEmpty()) {
             throw new IllegalArgumentException("Video not found on YouTube");
         }
+        // Check for age-restricted (18+) content
+        Map<String, Object> contentDetails = (Map<String, Object>) items.get(0).get("contentDetails");
+        if (contentDetails != null) {
+            Map<String, Object> contentRating = (Map<String, Object>) contentDetails.get("contentRating");
+            if (contentRating != null) {
+                String ytRating = (String) contentRating.get("ytRating");
+                if ("ytAgeRestricted".equals(ytRating)) {
+                    throw new IllegalArgumentException("This video is age-restricted (18+) and cannot be added");
+                }
+            }
+        }
+
         Map<String, Object> snippet = (Map<String, Object>) items.get(0).get("snippet");
 
         String title = (String) snippet.get("title");
@@ -92,6 +104,11 @@ public class TutorialService {
         tutorial.setTopics(topics);
         tutorial.setBackdrops(backdrops);
         tutorial.setReviewIds(new ArrayList<>());
+
+        // Check review body for inappropriate content
+        if (ProfanityFilter.containsProfanity(reviewBody)) {
+            throw new IllegalArgumentException("Review contains inappropriate language");
+        }
 
         tutorialsRepository.insert(tutorial);
 
@@ -140,7 +157,7 @@ public class TutorialService {
     private Map<String, Object> fetchYouTubeData(String videoId) {
         RestClient restClient = RestClient.create();
         return restClient.get()
-                .uri("https://www.googleapis.com/youtube/v3/videos?id={videoId}&key={apiKey}&part=snippet",
+                .uri("https://www.googleapis.com/youtube/v3/videos?id={videoId}&key={apiKey}&part=snippet,contentDetails",
                         videoId, youtubeApiKey)
                 .retrieve()
                 .body(Map.class);

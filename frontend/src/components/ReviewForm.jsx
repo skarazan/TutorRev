@@ -1,14 +1,22 @@
 import { useState } from 'react';
 import StarRating from './StarRating';
+import { containsProfanity } from '../utils/profanityFilter';
 
 export default function ReviewForm({ onSubmit }) {
   const [body, setBody] = useState('');
   const [rating, setRating] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!body.trim() || rating === 0) return;
+
+    if (containsProfanity(body)) {
+      setError('Review contains inappropriate language');
+      return;
+    }
+    setError('');
 
     setSubmitting(true);
     try {
@@ -26,6 +34,9 @@ export default function ReviewForm({ onSubmit }) {
         <label className="block text-sm text-cream-300/80 mb-1">Rating</label>
         <StarRating value={rating} onChange={setRating} />
       </div>
+      {error && (
+        <p className="text-java-400 text-sm">{error}</p>
+      )}
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}

@@ -70,6 +70,11 @@ public class AuthController {
                     .body(Map.of("error", "username, email, and password are required"));
         }
 
+        if (ProfanityFilter.containsProfanity(username)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Username contains inappropriate language"));
+        }
+
         // Check for duplicates BEFORE attempting to save.
         // This gives the user a clear error message instead of a
         // MongoDB duplicate key exception (which would be a 500 error).

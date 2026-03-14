@@ -20,6 +20,9 @@ public class ReviewService {
         if (rating < 1 || rating > 5) {
             throw new IllegalArgumentException("Rating must be between 1 and 5");
         }
+        if (ProfanityFilter.containsProfanity(reviewBody)) {
+            throw new IllegalArgumentException("Review contains inappropriate language");
+        }
         Reviews review = reviewRepository.insert(new Reviews(reviewBody, username, rating));
 
         mongoTemplate.update(Tutorials.class).matching(Criteria.where("id")

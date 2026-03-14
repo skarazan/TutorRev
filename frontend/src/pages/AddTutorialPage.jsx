@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTutorial } from '../api/tutorials';
 import StarRating from '../components/StarRating';
+import { containsProfanity } from '../utils/profanityFilter';
 
 export default function AddTutorialPage() {
   const navigate = useNavigate();
@@ -25,6 +26,11 @@ export default function AddTutorialPage() {
 
     if (rating === 0) {
       setError('Please select a rating');
+      return;
+    }
+
+    if (containsProfanity(reviewBody)) {
+      setError('Review contains inappropriate language');
       return;
     }
 

@@ -107,7 +107,7 @@ export default function DashboardPage() {
   return (
     <>
       {/* Dev Notes — fixed sidebar in the right margin, only on wide screens */}
-      <div className="hidden 2xl:block fixed top-20 right-4 w-72 z-40">
+      <div className="hidden 2xl:block fixed top-20 right-0 w-64 z-40 pr-3">
         <DevNotesPanel />
       </div>
 

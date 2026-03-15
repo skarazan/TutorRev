@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage';
 import TutorialDetailPage from './pages/TutorialDetailPage';
 import AddTutorialPage from './pages/AddTutorialPage';
 import ProfilePage from './pages/ProfilePage';
+import DevNotesPage from './pages/DevNotesPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function LayoutWithNavbar() {
@@ -37,6 +38,7 @@ export default function App() {
               <Route path="/tutorials/:id" element={<TutorialDetailPage />} />
               <Route path="/add-tutorial" element={<AddTutorialPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/devnotes" element={<DevNotesPage />} />
             </Route>
           </Route>
 

@@ -5,8 +5,6 @@ import TutorialCard from '../components/TutorialCard';
 import TutorialFilters from '../components/TutorialFilters';
 import FeaturedCarousel from '../components/FeaturedCarousel';
 import LoadingSpinner from '../components/LoadingSpinner';
-import DevNotesPanel from '../components/DevNotesPanel';
-
 export default function DashboardPage() {
   const [tutorials, setTutorials] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -105,13 +103,7 @@ export default function DashboardPage() {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <>
-      {/* Dev Notes — fixed sidebar in the right margin, only on wide screens */}
-      <div className="hidden 2xl:block fixed top-20 right-0 w-64 z-40 pr-3">
-        <DevNotesPanel />
-      </div>
-
-      <div>
+    <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -184,7 +176,6 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 }

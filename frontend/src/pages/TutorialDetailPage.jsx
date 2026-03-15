@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTutorial, deleteTutorial } from '../api/tutorials';
 import { createReview, deleteReview } from '../api/reviews';
@@ -21,6 +21,8 @@ export default function TutorialDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [avatarMap, setAvatarMap] = useState({});
   const [sortBy, setSortBy] = useState('newest');
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortRef = useRef(null);
 
   function fetchTutorial() {
     return getTutorial(id)
@@ -42,6 +44,15 @@ export default function TutorialDetailPage() {
   useEffect(() => {
     fetchTutorial();
   }, [id]);
+
+  // Close sort dropdown on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   const reviews = tutorial?.reviewIds || [];
 
@@ -194,17 +205,40 @@ export default function TutorialDetailPage() {
             Reviews ({reviews.length})
           </h2>
           {reviews.length > 1 && (
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5
-                         text-cream-200 text-xs focus:outline-none focus:border-coffee-500
-                         transition-colors cursor-pointer"
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="most_liked">Most liked</option>
-            </select>
+            <div className="relative" ref={sortRef}>
+              <button
+                onClick={() => setSortOpen(!sortOpen)}
+                className="flex items-center gap-2 bg-coffee-500/10 border border-coffee-500/30
+                           rounded-full px-4 py-1.5 text-coffee-300 text-xs font-medium
+                           hover:bg-coffee-500/20 hover:border-coffee-500/50 transition-colors"
+              >
+                {sortBy === 'newest' ? 'Newest first' : sortBy === 'oldest' ? 'Oldest first' : 'Most liked'}
+                <svg className={`w-3 h-3 transition-transform ${sortOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {sortOpen && (
+                <div className="absolute right-0 mt-1.5 w-40 bg-dark-700 border border-coffee-500/20
+                                rounded-lg shadow-lg shadow-black/30 overflow-hidden z-10">
+                  {[
+                    { value: 'newest', label: 'Newest first' },
+                    { value: 'oldest', label: 'Oldest first' },
+                    { value: 'most_liked', label: 'Most liked' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setSortBy(opt.value); setSortOpen(false); }}
+                      className={`w-full text-left px-4 py-2 text-xs transition-colors
+                                  ${sortBy === opt.value
+                                    ? 'bg-coffee-500/20 text-coffee-300 font-medium'
+                                    : 'text-cream-300/70 hover:bg-coffee-500/10 hover:text-coffee-300'}`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

@@ -43,6 +43,22 @@ export default function TutorialDetailPage() {
     fetchTutorial();
   }, [id]);
 
+  const reviews = tutorial?.reviewIds || [];
+
+  // Sort reviews — must be above early returns so hooks run on every render
+  const sortedReviews = useMemo(() => {
+    const copy = [...reviews];
+    switch (sortBy) {
+      case 'oldest':
+        return copy.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+      case 'most_liked':
+        return copy.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+      case 'newest':
+      default:
+        return copy.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    }
+  }, [reviews, sortBy]);
+
   async function handleReviewSubmit(reviewBody, rating) {
     await createReview(reviewBody, id, rating);
     await fetchTutorial(); // Re-fetch to show the new review
@@ -65,6 +81,15 @@ export default function TutorialDetailPage() {
     }
   }
 
+  // Update a single review in-place after like/dislike toggle
+  function handleReviewUpdate(updatedReview) {
+    if (!tutorial) return;
+    const newReviews = tutorial.reviewIds.map((r) =>
+      r.reviewId === updatedReview.reviewId ? updatedReview : r
+    );
+    setTutorial({ ...tutorial, reviewIds: newReviews });
+  }
+
   if (loading) return <LoadingSpinner />;
 
   if (error) {
@@ -84,36 +109,12 @@ export default function TutorialDetailPage() {
   if (!tutorial) return null;
 
   const topics = tutorial.topics?.[0] || [];
-  const reviews = tutorial.reviewIds || [];
 
   // Compute average rating (only from reviews that have a rating)
   const ratedReviews = reviews.filter((r) => r.rating > 0);
   const avgRating = ratedReviews.length > 0
     ? ratedReviews.reduce((sum, r) => sum + r.rating, 0) / ratedReviews.length
     : 0;
-
-  // Sort reviews
-  const sortedReviews = useMemo(() => {
-    const copy = [...reviews];
-    switch (sortBy) {
-      case 'oldest':
-        return copy.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-      case 'most_liked':
-        return copy.sort((a, b) => (b.likes || 0) - (a.likes || 0));
-      case 'newest':
-      default:
-        return copy.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    }
-  }, [reviews, sortBy]);
-
-  // Update a single review in-place after like/dislike toggle
-  function handleReviewUpdate(updatedReview) {
-    if (!tutorial) return;
-    const newReviews = tutorial.reviewIds.map((r) =>
-      r.reviewId === updatedReview.reviewId ? updatedReview : r
-    );
-    setTutorial({ ...tutorial, reviewIds: newReviews });
-  }
 
   return (
     <div className="max-w-4xl mx-auto">

@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -15,6 +16,9 @@ public class ReviewController {
 
     @Autowired
     private ReviewService reviewService;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     @Autowired
     private RateLimitService rateLimitService;
@@ -31,6 +35,12 @@ public class ReviewController {
 
         int rating = Integer.parseInt(payload.get("rating"));
         return new ResponseEntity<>(reviewService.createReview(payload.get("reviewBody"), payload.get("id"), username, rating), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/user")
+    public ResponseEntity<List<Reviews>> getUserReviews(Authentication authentication) {
+        String username = authentication.getName();
+        return new ResponseEntity<>(reviewRepository.findByUsername(username), HttpStatus.OK);
     }
 
     @DeleteMapping("/{reviewId}")

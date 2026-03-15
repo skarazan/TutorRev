@@ -2,6 +2,9 @@ package dev.tutorRev.TutorRev;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -44,6 +47,9 @@ public class AuthController {
 
     @Autowired
     private RateLimitService rateLimitService;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     private final Random random = new Random();
 
@@ -278,5 +284,152 @@ public class AuthController {
                 "roles", user.getRoles().stream().map(Enum::name).toList(),
                 "provider", user.getProvider() != null ? user.getProvider() : "local"
         ));
+    }
+
+    // =========================================================
+    // CHANGE USERNAME: PUT /api/v1/auth/profile/username
+    // Body: { "newUsername": "..." }
+    // Cascades to all reviews by this user.
+    // =========================================================
+    @PutMapping("/profile/username")
+    public ResponseEntity<?> changeUsername(@RequestBody Map<String, String> payload,
+                                            Authentication authentication) {
+        String currentUsername = authentication.getName();
+
+        if (!rateLimitService.tryConsumeByUser("change-username", currentUsername, 5, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many requests. Please try again later."));
+        }
+
+        String newUsername = payload.get("newUsername");
+        if (newUsername == null || newUsername.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "New username is required"));
+        }
+
+        newUsername = newUsername.trim();
+
+        if (newUsername.equals(currentUsername)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "New username is the same as current"));
+        }
+
+        if (ProfanityFilter.containsProfanity(newUsername)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Username contains inappropriate language"));
+        }
+
+        if (userRepository.existsByUsername(newUsername)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "Username already taken"));
+        }
+
+        User user = userRepository.findByUsername(currentUsername).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        }
+
+        // Update username on user document
+        user.setUsername(newUsername);
+        userRepository.save(user);
+
+        // Cascade: update username on all reviews by this user
+        mongoTemplate.updateMulti(
+                org.springframework.data.mongodb.core.query.Query.query(
+                        Criteria.where("username").is(currentUsername)),
+                new Update().set("username", newUsername),
+                Reviews.class
+        );
+
+        // Issue a new JWT with the updated username
+        String newToken = jwtUtil.generateToken(newUsername);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Username updated successfully",
+                "username", newUsername,
+                "token", newToken
+        ));
+    }
+
+    // =========================================================
+    // REQUEST PASSWORD CHANGE CODE:
+    // POST /api/v1/auth/profile/request-password-change
+    // Sends a 6-digit code to the user's email.
+    // =========================================================
+    @PostMapping("/profile/request-password-change")
+    public ResponseEntity<?> requestPasswordChange(Authentication authentication) {
+        String username = authentication.getName();
+
+        if (!rateLimitService.tryConsumeByUser("req-pw-change", username, 3, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many requests. Please try again later."));
+        }
+
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        }
+
+        String code = generateVerificationCode();
+        user.setVerificationCode(code);
+        user.setVerificationCodeExpiry(Instant.now().plus(15, ChronoUnit.MINUTES));
+        userRepository.save(user);
+
+        emailService.sendPasswordChangeCode(user.getEmail(), code);
+
+        return ResponseEntity.ok(Map.of("message", "Verification code sent to your email"));
+    }
+
+    // =========================================================
+    // CHANGE PASSWORD: PUT /api/v1/auth/profile/password
+    // Body: { "code": "123456", "newPassword": "..." }
+    // =========================================================
+    @PutMapping("/profile/password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> payload,
+                                             Authentication authentication) {
+        String username = authentication.getName();
+
+        if (!rateLimitService.tryConsumeByUser("change-password", username, 5, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many requests. Please try again later."));
+        }
+
+        String code = payload.get("code");
+        String newPassword = payload.get("newPassword");
+
+        if (code == null || newPassword == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Code and new password are required"));
+        }
+
+        if (newPassword.length() < 6) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Password must be at least 6 characters"));
+        }
+
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        }
+
+        if (user.getVerificationCode() == null || !user.getVerificationCode().equals(code)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid verification code"));
+        }
+
+        if (user.getVerificationCodeExpiry().isBefore(Instant.now())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Verification code has expired. Please request a new one."));
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setVerificationCode(null);
+        user.setVerificationCodeExpiry(null);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 }

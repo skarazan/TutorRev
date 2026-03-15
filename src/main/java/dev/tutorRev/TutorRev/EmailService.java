@@ -31,4 +31,21 @@ public class EmailService {
 
         mailSender.send(message);
     }
+
+    public void sendPasswordChangeCode(String toEmail, String code) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(toEmail);
+        message.setSubject("TutorRev password change code");
+        message.setText(
+            "You requested a password change on TutorRev.\n\n" +
+            "Your verification code is:\n\n" +
+            "    " + code + "\n\n" +
+            "Enter this code on the profile page to confirm your password change.\n\n" +
+            "This code expires in 15 minutes.\n\n" +
+            "If you didn't request this, you can ignore this email."
+        );
+
+        mailSender.send(message);
+    }
 }

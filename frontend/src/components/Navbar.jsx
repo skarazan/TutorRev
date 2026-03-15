@@ -36,7 +36,12 @@ export default function Navbar() {
               Add Tutorial
             </Link>
             <div className="flex items-center gap-3 ml-4 pl-4 border-l border-dark-600">
-              <span className="text-sm text-coffee-300">{user?.username}</span>
+              <Link
+                to="/profile"
+                className="text-sm text-coffee-300 hover:text-coffee-400 transition-colors"
+              >
+                {user?.username}
+              </Link>
               <button
                 onClick={handleLogout}
                 className="text-sm text-cream-300/40 hover:text-java-400 transition-colors"
@@ -79,7 +84,13 @@ export default function Navbar() {
               Add Tutorial
             </Link>
             <div className="px-3 py-2 border-t border-dark-600 mt-2 pt-2 flex items-center justify-between">
-              <span className="text-sm text-coffee-300">{user?.username}</span>
+              <Link
+                to="/profile"
+                onClick={() => setMenuOpen(false)}
+                className="text-sm text-coffee-300 hover:text-coffee-400 transition-colors"
+              >
+                {user?.username}
+              </Link>
               <button
                 onClick={handleLogout}
                 className="text-sm text-cream-300/40 hover:text-java-400 transition-colors"

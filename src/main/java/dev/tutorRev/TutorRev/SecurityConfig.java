@@ -82,6 +82,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/auth/promote/**")
                         .hasAuthority("ROLE_ADMIN")
 
+                        // Profile endpoints — must come BEFORE auth/** wildcard
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/auth/profile/**")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/profile/**")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+
                         // "/api/v1/auth/**" — the auth endpoints (register, login, logout)
                         // These MUST be public because users can't authenticate
                         // before they've registered or logged in (chicken-and-egg problem).
@@ -107,6 +113,10 @@ public class SecurityConfig {
                         // DELETE /api/v1/tutorials/{id} — admin only
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/tutorials/**")
                         .hasAuthority("ROLE_ADMIN")
+
+                        // GET /api/v1/reviews/user — current user's reviews
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/user")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 
                         // YOUR EXISTING ENDPOINT: POST /api/v1/reviews
                         // This is in ReviewController.java (lines 21-25).

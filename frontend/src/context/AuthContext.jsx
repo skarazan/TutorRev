@@ -60,6 +60,16 @@ export function AuthProvider({ children }) {
     setUser(meRes.data);
   }
 
+  async function refreshUser(newToken) {
+    if (newToken) {
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+    }
+    const meRes = await getMe();
+    localStorage.setItem('username', meRes.data.username);
+    setUser(meRes.data);
+  }
+
   async function logoutAction() {
     try {
       await logoutApi();
@@ -81,6 +91,7 @@ export function AuthProvider({ children }) {
     registerAction,
     logoutAction,
     handleOAuthToken,
+    refreshUser,
   };
 
   return (

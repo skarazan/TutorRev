@@ -7,6 +7,7 @@ import OAuthCallbackPage from './pages/OAuthCallbackPage';
 import DashboardPage from './pages/DashboardPage';
 import TutorialDetailPage from './pages/TutorialDetailPage';
 import AddTutorialPage from './pages/AddTutorialPage';
+import ProfilePage from './pages/ProfilePage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function LayoutWithNavbar() {
@@ -35,6 +36,7 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/tutorials/:id" element={<TutorialDetailPage />} />
               <Route path="/add-tutorial" element={<AddTutorialPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>
 

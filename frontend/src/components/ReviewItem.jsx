@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import StarRating from './StarRating';
 
-export default function ReviewItem({ review, isAdmin, onDelete }) {
+export default function ReviewItem({ review, isAdmin, onDelete, avatarUrl }) {
   const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {
@@ -18,9 +18,13 @@ export default function ReviewItem({ review, isAdmin, onDelete }) {
     <div className="bg-dark-800 border border-dark-600 rounded-lg p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-coffee-500 flex items-center justify-center text-xs text-cream-100 font-medium">
-            {review.username?.charAt(0)?.toUpperCase() || '?'}
-          </div>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-coffee-500 flex items-center justify-center text-xs text-cream-100 font-medium">
+              {review.username?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+          )}
           <span className="text-sm font-medium text-coffee-300">{review.username || 'Anonymous'}</span>
           {review.rating > 0 && <StarRating value={review.rating} size="sm" />}
         </div>

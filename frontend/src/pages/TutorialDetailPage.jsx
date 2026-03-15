@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTutorial, deleteTutorial } from '../api/tutorials';
 import { createReview, deleteReview } from '../api/reviews';
+import { getAvatars } from '../api/profile';
 import { useAuth } from '../context/AuthContext';
 import LevelBadge from '../components/LevelBadge';
 import StarRating from '../components/StarRating';
@@ -18,10 +19,21 @@ export default function TutorialDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [avatarMap, setAvatarMap] = useState({});
 
   function fetchTutorial() {
     return getTutorial(id)
-      .then((res) => setTutorial(res.data))
+      .then((res) => {
+        setTutorial(res.data);
+        // Batch-fetch avatars for all reviewers
+        const reviewers = res.data.reviewIds || [];
+        const usernames = [...new Set(reviewers.map((r) => r.username).filter(Boolean))];
+        if (usernames.length > 0) {
+          getAvatars(usernames)
+            .then((avatarRes) => setAvatarMap(avatarRes.data))
+            .catch(() => {}); // silently ignore avatar fetch failures
+        }
+      })
       .catch((err) => setError(err.response?.data?.error || 'Failed to load tutorial'))
       .finally(() => setLoading(false));
   }
@@ -167,7 +179,7 @@ export default function TutorialDetailPage() {
         ) : (
           <div className="space-y-3">
             {reviews.map((review) => (
-              <ReviewItem key={review.reviewId} review={review} isAdmin={isAdmin} onDelete={handleReviewDelete} />
+              <ReviewItem key={review.reviewId} review={review} isAdmin={isAdmin} onDelete={handleReviewDelete} avatarUrl={avatarMap[review.username]} />
             ))}
           </div>
         )}

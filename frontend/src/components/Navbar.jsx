@@ -38,8 +38,19 @@ export default function Navbar() {
             <div className="flex items-center gap-3 ml-4 pl-4 border-l border-dark-600">
               <Link
                 to="/profile"
-                className="text-sm text-coffee-300 hover:text-coffee-400 transition-colors"
+                className="flex items-center gap-2 text-sm text-coffee-300 hover:text-coffee-400 transition-colors"
               >
+                {user?.profilePicture ? (
+                  <img
+                    src={user.profilePicture}
+                    alt=""
+                    className="w-6 h-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-coffee-500 flex items-center justify-center text-[10px] text-cream-100 font-medium">
+                    {user?.username?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
                 {user?.username}
               </Link>
               <button
@@ -87,8 +98,19 @@ export default function Navbar() {
               <Link
                 to="/profile"
                 onClick={() => setMenuOpen(false)}
-                className="text-sm text-coffee-300 hover:text-coffee-400 transition-colors"
+                className="flex items-center gap-2 text-sm text-coffee-300 hover:text-coffee-400 transition-colors"
               >
+                {user?.profilePicture ? (
+                  <img
+                    src={user.profilePicture}
+                    alt=""
+                    className="w-6 h-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-coffee-500 flex items-center justify-center text-[10px] text-cream-100 font-medium">
+                    {user?.username?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
                 {user?.username}
               </Link>
               <button

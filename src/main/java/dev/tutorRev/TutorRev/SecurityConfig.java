@@ -87,6 +87,12 @@ public class SecurityConfig {
                         .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/profile/**")
                         .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/auth/profile/**")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+
+                        // Batch avatar lookup — authenticated users
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/avatars")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 
                         // "/api/v1/auth/**" — the auth endpoints (register, login, logout)
                         // These MUST be public because users can't authenticate

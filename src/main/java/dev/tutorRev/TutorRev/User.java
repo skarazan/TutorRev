@@ -41,4 +41,6 @@ public class User {
     private String verificationCode;
 
     private Instant verificationCodeExpiry;
+
+    private String profilePicture;
 }

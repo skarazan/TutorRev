@@ -18,10 +18,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -278,12 +276,13 @@ public class AuthController {
                     .body(Map.of("error", "User not found"));
         }
 
-        return ResponseEntity.ok(Map.of(
-                "username", user.getUsername(),
-                "email", user.getEmail(),
-                "roles", user.getRoles().stream().map(Enum::name).toList(),
-                "provider", user.getProvider() != null ? user.getProvider() : "local"
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("username", user.getUsername());
+        response.put("email", user.getEmail());
+        response.put("roles", user.getRoles().stream().map(Enum::name).toList());
+        response.put("provider", user.getProvider() != null ? user.getProvider() : "local");
+        response.put("profilePicture", user.getProfilePicture());
+        return ResponseEntity.ok(response);
     }
 
     // =========================================================
@@ -431,5 +430,93 @@ public class AuthController {
         userRepository.save(user);
 
         return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
+    }
+
+    // =========================================================
+    // UPLOAD PROFILE PICTURE: PUT /api/v1/auth/profile/picture
+    // Body: { "profilePicture": "data:image/jpeg;base64,..." }
+    // =========================================================
+    @PutMapping("/profile/picture")
+    public ResponseEntity<?> uploadProfilePicture(@RequestBody Map<String, String> payload,
+                                                   Authentication authentication) {
+        String username = authentication.getName();
+
+        if (!rateLimitService.tryConsumeByUser("upload-picture", username, 5, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many requests. Please try again later."));
+        }
+
+        String profilePicture = payload.get("profilePicture");
+        if (profilePicture == null || profilePicture.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Profile picture data is required"));
+        }
+
+        if (!profilePicture.startsWith("data:image/")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid image format"));
+        }
+
+        // ~700KB Base64 string ≈ ~500KB image
+        if (profilePicture.length() > 700_000) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Image is too large. Maximum size is 500KB."));
+        }
+
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        }
+
+        user.setProfilePicture(profilePicture);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(Map.of("message", "Profile picture updated"));
+    }
+
+    // =========================================================
+    // DELETE PROFILE PICTURE: DELETE /api/v1/auth/profile/picture
+    // =========================================================
+    @DeleteMapping("/profile/picture")
+    public ResponseEntity<?> deleteProfilePicture(Authentication authentication) {
+        String username = authentication.getName();
+
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        }
+
+        user.setProfilePicture(null);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(Map.of("message", "Profile picture removed"));
+    }
+
+    // =========================================================
+    // BATCH AVATARS: POST /api/v1/auth/avatars
+    // Body: { "usernames": ["user1", "user2", ...] }
+    // Returns map of username → profilePicture (or null)
+    // =========================================================
+    @PostMapping("/avatars")
+    public ResponseEntity<?> getAvatars(@RequestBody Map<String, List<String>> payload) {
+        List<String> usernames = payload.get("usernames");
+        if (usernames == null || usernames.isEmpty()) {
+            return ResponseEntity.ok(Map.of());
+        }
+
+        // Cap at 50 usernames per request
+        if (usernames.size() > 50) {
+            usernames = usernames.subList(0, 50);
+        }
+
+        List<User> users = userRepository.findByUsernameIn(usernames);
+        Map<String, String> avatars = new HashMap<>();
+        for (User user : users) {
+            avatars.put(user.getUsername(), user.getProfilePicture());
+        }
+
+        return ResponseEntity.ok(avatars);
     }
 }

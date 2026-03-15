@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { changeUsername, requestPasswordChange, changePassword, getUserReviews } from '../api/profile';
+import { changeUsername, requestPasswordChange, changePassword, getUserReviews, uploadProfilePicture, deleteProfilePicture } from '../api/profile';
 import { containsProfanity } from '../utils/profanityFilter';
 import StarRating from '../components/StarRating';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -25,6 +25,11 @@ export default function ProfilePage() {
   const [sendingCode, setSendingCode] = useState(false);
   const [changingPw, setChangingPw] = useState(false);
 
+  // Avatar state
+  const fileInputRef = useRef(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarErr, setAvatarErr] = useState('');
+
   // Reviews state
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
@@ -44,6 +49,56 @@ export default function ProfilePage() {
   }, []);
 
   const isGoogle = user?.provider === 'google';
+
+  // ---- Avatar ----
+  function handleAvatarClick() {
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileSelect(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarErr('');
+
+    if (!file.type.startsWith('image/')) {
+      setAvatarErr('Please select an image file');
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      setAvatarErr('Image must be under 500KB');
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      await uploadProfilePicture(base64);
+      await refreshUser();
+    } catch (err) {
+      setAvatarErr(err.response?.data?.error || 'Failed to upload picture');
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = '';
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    setAvatarErr('');
+    setAvatarUploading(true);
+    try {
+      await deleteProfilePicture();
+      await refreshUser();
+    } catch (err) {
+      setAvatarErr(err.response?.data?.error || 'Failed to remove picture');
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   // ---- Username ----
   async function handleUsernameChange(e) {
@@ -139,6 +194,75 @@ export default function ProfilePage() {
           </svg>
           Account
         </h2>
+
+        {/* Profile Picture */}
+        <div className="flex items-center gap-5 mb-6 pb-6 border-b border-dark-600">
+          <button
+            onClick={handleAvatarClick}
+            disabled={avatarUploading}
+            className="relative group w-20 h-20 rounded-full flex-shrink-0 overflow-hidden
+                       focus:outline-none focus:ring-2 focus:ring-coffee-500 focus:ring-offset-2
+                       focus:ring-offset-dark-700 disabled:opacity-50"
+          >
+            {user.profilePicture ? (
+              <img
+                src={user.profilePicture}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-coffee-500 flex items-center justify-center
+                              text-2xl font-bold text-cream-100">
+                {user.username?.charAt(0)?.toUpperCase() || '?'}
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center
+                            opacity-0 group-hover:opacity-100 transition-opacity">
+              <svg className="w-5 h-5 text-cream-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86
+                         a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0
+                         01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          <div className="space-y-1">
+            <button
+              onClick={handleAvatarClick}
+              disabled={avatarUploading}
+              className="block text-sm text-coffee-300 hover:text-coffee-400 transition-colors
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {avatarUploading ? 'Uploading...' : 'Change picture'}
+            </button>
+            {user.profilePicture && (
+              <button
+                onClick={handleRemoveAvatar}
+                disabled={avatarUploading}
+                className="block text-xs text-cream-300/40 hover:text-java-400 transition-colors
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Remove
+              </button>
+            )}
+            <p className="text-cream-300/30 text-xs">Max 500KB · JPG, PNG, GIF</p>
+          </div>
+
+          {avatarErr && (
+            <p className="text-java-400 text-xs">{avatarErr}</p>
+          )}
+        </div>
 
         {/* Email (read-only) */}
         <div className="mb-4">

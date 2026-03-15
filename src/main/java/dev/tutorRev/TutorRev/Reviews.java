@@ -38,14 +38,24 @@ public class Reviews {
         return id != null ? id.toHexString() : null;
     }
 
+    public List<String> getLikedBy() {
+        if (likedBy == null) likedBy = new ArrayList<>();
+        return likedBy;
+    }
+
+    public List<String> getDislikedBy() {
+        if (dislikedBy == null) dislikedBy = new ArrayList<>();
+        return dislikedBy;
+    }
+
     @JsonProperty("likes")
     public int getLikes() {
-        return likedBy != null ? likedBy.size() : 0;
+        return getLikedBy().size();
     }
 
     @JsonProperty("dislikes")
     public int getDislikes() {
-        return dislikedBy != null ? dislikedBy.size() : 0;
+        return getDislikedBy().size();
     }
 
     public Reviews(String review, String username, int rating) {

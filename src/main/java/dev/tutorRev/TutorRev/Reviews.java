@@ -1,5 +1,6 @@
 package dev.tutorRev.TutorRev;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,6 +20,7 @@ import java.util.List;
 public class Reviews {
 
     @Id
+    @JsonIgnore
     private ObjectId id;
 
     private String body;

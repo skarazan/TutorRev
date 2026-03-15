@@ -1,5 +1,6 @@
 package dev.tutorRev.TutorRev;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,6 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 public class Tutorials {
     @Id
+    @JsonIgnore
     private ObjectId _id;
 
     private String id;

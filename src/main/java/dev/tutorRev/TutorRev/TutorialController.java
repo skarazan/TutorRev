@@ -27,8 +27,10 @@ public class TutorialController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Optional<Tutorials>> GetTutorial(@PathVariable String id){
-        return new ResponseEntity<Optional<Tutorials>>(tutorialService.getTutorial(id), HttpStatus.OK);
+    public ResponseEntity<Tutorials> GetTutorial(@PathVariable String id){
+        return tutorialService.getTutorial(id)
+                .map(tutorial -> new ResponseEntity<>(tutorial, HttpStatus.OK))
+                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @PostMapping

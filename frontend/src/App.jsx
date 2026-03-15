@@ -9,6 +9,8 @@ import TutorialDetailPage from './pages/TutorialDetailPage';
 import AddTutorialPage from './pages/AddTutorialPage';
 import ProfilePage from './pages/ProfilePage';
 import DevNotesPage from './pages/DevNotesPage';
+import AboutPage from './pages/AboutPage';
+import RulesPage from './pages/RulesPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function LayoutWithNavbar() {
@@ -39,6 +41,8 @@ export default function App() {
               <Route path="/add-tutorial" element={<AddTutorialPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/devnotes" element={<DevNotesPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/rules" element={<RulesPage />} />
             </Route>
           </Route>
 

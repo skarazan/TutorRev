@@ -49,4 +49,20 @@ public class ReviewController {
         reviewService.deleteReview(reviewId, tutorialId);
         return new ResponseEntity<>(Map.of("message", "Review deleted successfully"), HttpStatus.OK);
     }
+
+    @PutMapping("/{reviewId}/like")
+    public ResponseEntity<?> toggleLike(@PathVariable String reviewId,
+                                        Authentication authentication) {
+        String username = authentication.getName();
+        Reviews review = reviewService.toggleLike(reviewId, username);
+        return new ResponseEntity<>(review, HttpStatus.OK);
+    }
+
+    @PutMapping("/{reviewId}/dislike")
+    public ResponseEntity<?> toggleDislike(@PathVariable String reviewId,
+                                           Authentication authentication) {
+        String username = authentication.getName();
+        Reviews review = reviewService.toggleDislike(reviewId, username);
+        return new ResponseEntity<>(review, HttpStatus.OK);
+    }
 }

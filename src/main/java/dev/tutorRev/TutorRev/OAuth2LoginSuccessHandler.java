@@ -45,20 +45,14 @@ public class OAuth2LoginSuccessHandler
                                         Authentication authentication)
             throws IOException, ServletException {
 
-        // Spring Security gives us an OAuth2User object populated with
-        // data from Google's userinfo endpoint. We extract what we need:
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
         String email = oAuth2User.getAttribute("email");     // user's Gmail address
         String googleId = oAuth2User.getAttribute("sub");    // Google's unique user ID
         String name = oAuth2User.getAttribute("name");       // display name
 
-        // FIND OR CREATE: Check if this email already exists in MongoDB.
-        // If the user logged in with Google before, we find their existing
-        // account. If it's their first time, we create a new User document.
-        //
-        // This is important because you don't want a new MongoDB document
-        // every time someone clicks "Sign in with Google."
+
+
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             User newUser = new User();
             newUser.setEmail(email);
@@ -78,19 +72,9 @@ public class OAuth2LoginSuccessHandler
             userRepository.save(user);
         }
 
-        // Generate a JWT for this user — same token format as local login.
-        // From this point on, the frontend uses this JWT for all API calls,
-        // and the JwtAuthFilter can't tell the difference between a Google
-        // user and a local user. They're both just valid JWT tokens.
+
         String token = jwtUtil.generateToken(user.getUsername());
 
-        // Redirect to your FRONTEND with the token as a query parameter.
-        // Your frontend (React, Angular, etc.) reads the token from the URL
-        // and stores it in localStorage for future API calls.
-        //
-        // ⚠️ CHANGE THIS URL to match where your frontend is running!
-        // If you don't have a frontend yet, you can change this to return
-        // JSON instead — see the note below.
         response.sendRedirect(frontendUrl + "/oauth2/callback?token=" + token);
 
     }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTutorial, deleteTutorial } from '../api/tutorials';
 import { createReview, deleteReview } from '../api/reviews';
@@ -13,13 +13,14 @@ import LoadingSpinner from '../components/LoadingSpinner';
 export default function TutorialDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const [tutorial, setTutorial] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [avatarMap, setAvatarMap] = useState({});
+  const [sortBy, setSortBy] = useState('newest');
 
   function fetchTutorial() {
     return getTutorial(id)
@@ -90,6 +91,29 @@ export default function TutorialDetailPage() {
   const avgRating = ratedReviews.length > 0
     ? ratedReviews.reduce((sum, r) => sum + r.rating, 0) / ratedReviews.length
     : 0;
+
+  // Sort reviews
+  const sortedReviews = useMemo(() => {
+    const copy = [...reviews];
+    switch (sortBy) {
+      case 'oldest':
+        return copy.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+      case 'most_liked':
+        return copy.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+      case 'newest':
+      default:
+        return copy.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    }
+  }, [reviews, sortBy]);
+
+  // Update a single review in-place after like/dislike toggle
+  function handleReviewUpdate(updatedReview) {
+    if (!tutorial) return;
+    const newReviews = tutorial.reviewIds.map((r) =>
+      r.reviewId === updatedReview.reviewId ? updatedReview : r
+    );
+    setTutorial({ ...tutorial, reviewIds: newReviews });
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -164,9 +188,24 @@ export default function TutorialDetailPage() {
 
       {/* Reviews Section */}
       <div>
-        <h2 className="text-lg font-semibold text-cream-100 mb-4">
-          Reviews ({reviews.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-cream-100">
+            Reviews ({reviews.length})
+          </h2>
+          {reviews.length > 1 && (
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5
+                         text-cream-200 text-xs focus:outline-none focus:border-coffee-500
+                         transition-colors cursor-pointer"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="most_liked">Most liked</option>
+            </select>
+          )}
+        </div>
 
         {/* Add Review */}
         <div className="mb-6">
@@ -178,8 +217,16 @@ export default function TutorialDetailPage() {
           <p className="text-cream-300/40 text-sm">No reviews yet. Be the first!</p>
         ) : (
           <div className="space-y-3">
-            {reviews.map((review) => (
-              <ReviewItem key={review.reviewId} review={review} isAdmin={isAdmin} onDelete={handleReviewDelete} avatarUrl={avatarMap[review.username]} />
+            {sortedReviews.map((review) => (
+              <ReviewItem
+                key={review.reviewId}
+                review={review}
+                isAdmin={isAdmin}
+                onDelete={handleReviewDelete}
+                avatarUrl={avatarMap[review.username]}
+                currentUsername={user?.username}
+                onReviewUpdate={handleReviewUpdate}
+              />
             ))}
           </div>
         )}

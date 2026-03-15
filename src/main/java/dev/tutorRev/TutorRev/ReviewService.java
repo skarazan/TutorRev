@@ -46,4 +46,40 @@ public class ReviewService {
         // Delete the review document itself
         reviewRepository.deleteById(objId);
     }
+
+    public Reviews toggleLike(String reviewId, String username) {
+        ObjectId objId = new ObjectId(reviewId);
+        Reviews review = reviewRepository.findById(objId)
+                .orElseThrow(() -> new IllegalArgumentException("Review not found"));
+
+        // Remove from dislikedBy if present
+        review.getDislikedBy().remove(username);
+
+        // Toggle like
+        if (review.getLikedBy().contains(username)) {
+            review.getLikedBy().remove(username);
+        } else {
+            review.getLikedBy().add(username);
+        }
+
+        return reviewRepository.save(review);
+    }
+
+    public Reviews toggleDislike(String reviewId, String username) {
+        ObjectId objId = new ObjectId(reviewId);
+        Reviews review = reviewRepository.findById(objId)
+                .orElseThrow(() -> new IllegalArgumentException("Review not found"));
+
+        // Remove from likedBy if present
+        review.getLikedBy().remove(username);
+
+        // Toggle dislike
+        if (review.getDislikedBy().contains(username)) {
+            review.getDislikedBy().remove(username);
+        } else {
+            review.getDislikedBy().add(username);
+        }
+
+        return reviewRepository.save(review);
+    }
 }

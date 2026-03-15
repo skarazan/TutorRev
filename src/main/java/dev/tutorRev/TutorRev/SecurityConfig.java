@@ -124,9 +124,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/reviews/user")
                         .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 
-                        // YOUR EXISTING ENDPOINT: POST /api/v1/reviews
-                        // This is in ReviewController.java (lines 21-25).
-                        // Only authenticated users can post reviews.
+                        // PUT /api/v1/reviews/{id}/like and /dislike — authenticated users
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/reviews/*/like")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/reviews/*/dislike")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+
+                        // POST /api/v1/reviews — create a review, authenticated users
                         .requestMatchers(HttpMethod.POST, "/api/v1/reviews")
                         .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 

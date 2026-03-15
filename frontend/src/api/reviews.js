@@ -5,3 +5,9 @@ export const createReview = (reviewBody, id, rating) =>
 
 export const deleteReview = (reviewId, tutorialId) =>
   api.delete(`/api/v1/reviews/${reviewId}?tutorialId=${tutorialId}`);
+
+export const toggleLike = (reviewId) =>
+  api.put(`/api/v1/reviews/${reviewId}/like`);
+
+export const toggleDislike = (reviewId) =>
+  api.put(`/api/v1/reviews/${reviewId}/dislike`);

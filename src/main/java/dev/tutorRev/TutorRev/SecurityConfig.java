@@ -138,13 +138,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/reviews/*/dislike")
                         .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 
+                        // PUT /api/v1/reviews/{id} — edit own review
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/reviews/*")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+
                         // POST /api/v1/reviews — create a review, authenticated users
                         .requestMatchers(HttpMethod.POST, "/api/v1/reviews")
                         .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 
-                        // DELETE /api/v1/reviews/{reviewId} — admin only
+                        // DELETE /api/v1/reviews/{reviewId} — owner or admin (enforced in service)
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/reviews/**")
-                        .hasAuthority("ROLE_ADMIN")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 
                         // GET /api/v1/devnotes — all authenticated users can view
                         .requestMatchers(HttpMethod.GET, "/api/v1/devnotes")

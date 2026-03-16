@@ -28,9 +28,9 @@ public class ReviewController {
                                            Authentication authentication){
         String username = authentication.getName();
 
-        if (!rateLimitService.tryConsumeByUser("reviews", username, 20, Duration.ofHours(1))) {
+        if (!rateLimitService.tryConsumeByUser("reviews", username, 3, Duration.ofMinutes(10))) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                    .body(Map.of("error", "Too many reviews. Please try again later."));
+                    .body(Map.of("error", "Too many reviews. You can post 3 reviews every 10 minutes."));
         }
 
         int rating = Integer.parseInt(payload.get("rating"));
@@ -45,9 +45,23 @@ public class ReviewController {
 
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<Map<String, String>> deleteReview(@PathVariable String reviewId,
-                                                            @RequestParam String tutorialId){
-        reviewService.deleteReview(reviewId, tutorialId);
+                                                            @RequestParam String tutorialId,
+                                                            Authentication authentication){
+        String username = authentication.getName();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        reviewService.deleteReview(reviewId, tutorialId, username, isAdmin);
         return new ResponseEntity<>(Map.of("message", "Review deleted successfully"), HttpStatus.OK);
+    }
+
+    @PutMapping("/{reviewId}")
+    public ResponseEntity<?> updateReview(@PathVariable String reviewId,
+                                          @RequestBody Map<String, String> payload,
+                                          Authentication authentication){
+        String username = authentication.getName();
+        int rating = Integer.parseInt(payload.get("rating"));
+        Reviews updated = reviewService.updateReview(reviewId, payload.get("reviewBody"), rating, username);
+        return new ResponseEntity<>(updated, HttpStatus.OK);
     }
 
     @PutMapping("/{reviewId}/like")

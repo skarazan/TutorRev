@@ -244,7 +244,10 @@ export default function TutorialDetailPage() {
 
         {/* Add Review */}
         <div className="mb-6">
-          <ReviewForm onSubmit={handleReviewSubmit} />
+          <ReviewForm
+            onSubmit={handleReviewSubmit}
+            hasReviewed={reviews.some((r) => r.username === user?.username)}
+          />
         </div>
 
         {/* Review List */}

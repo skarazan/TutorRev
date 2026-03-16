@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ReviewRepository extends MongoRepository<Reviews, ObjectId> {
     List<Reviews> findByUsername(String username);
+    boolean existsByUsernameAndIdIn(String username, List<ObjectId> ids);
 }

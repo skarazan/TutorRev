@@ -2,11 +2,21 @@ import { useState } from 'react';
 import StarRating from './StarRating';
 import { containsProfanity } from '../utils/profanityFilter';
 
-export default function ReviewForm({ onSubmit }) {
+const URL_REGEX = /(https?:\/\/\S+|www\.\S+)/gi;
+
+export default function ReviewForm({ onSubmit, hasReviewed }) {
   const [body, setBody] = useState('');
   const [rating, setRating] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  if (hasReviewed) {
+    return (
+      <p className="text-cream-300/50 text-sm italic">
+        You have already reviewed this tutorial.
+      </p>
+    );
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -16,6 +26,14 @@ export default function ReviewForm({ onSubmit }) {
       setError('Review contains inappropriate language');
       return;
     }
+
+    // Link limit — max 1 URL
+    const links = body.match(URL_REGEX) || [];
+    if (links.length > 1) {
+      setError('Reviews can contain at most one link');
+      return;
+    }
+
     setError('');
 
     setSubmitting(true);
@@ -23,6 +41,9 @@ export default function ReviewForm({ onSubmit }) {
       await onSubmit(body.trim(), rating);
       setBody('');
       setRating(0);
+    } catch (err) {
+      const msg = err.response?.data?.error || err.response?.data?.message || 'Failed to submit review';
+      setError(msg);
     } finally {
       setSubmitting(false);
     }

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 
 export default function Navbar() {
-  const { user, logoutAction } = useAuth();
+  const { user, logoutAction, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -53,6 +53,14 @@ export default function Navbar() {
             >
               Rules
             </Link>
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="text-sm text-coffee-300 hover:text-coffee-400 transition-colors"
+              >
+                Admin
+              </Link>
+            )}
             <div className="flex items-center gap-3 ml-4 pl-4 border-l border-dark-600">
               <Link
                 to="/profile"
@@ -133,6 +141,15 @@ export default function Navbar() {
             >
               Rules
             </Link>
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={() => setMenuOpen(false)}
+                className="block px-3 py-2 text-sm text-coffee-300 hover:text-coffee-400 transition-colors"
+              >
+                Admin
+              </Link>
+            )}
             <div className="px-3 py-2 border-t border-dark-600 mt-2 pt-2 flex items-center justify-between">
               <Link
                 to="/profile"

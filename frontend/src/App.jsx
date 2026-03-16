@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
 import OAuthCallbackPage from './pages/OAuthCallbackPage';
@@ -11,6 +12,7 @@ import ProfilePage from './pages/ProfilePage';
 import DevNotesPage from './pages/DevNotesPage';
 import AboutPage from './pages/AboutPage';
 import RulesPage from './pages/RulesPage';
+import AdminPanelPage from './pages/AdminPanelPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function LayoutWithNavbar() {
@@ -43,6 +45,9 @@ export default function App() {
               <Route path="/devnotes" element={<DevNotesPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/rules" element={<RulesPage />} />
+              <Route element={<AdminRoute />}>
+                <Route path="/admin" element={<AdminPanelPage />} />
+              </Route>
             </Route>
           </Route>
 

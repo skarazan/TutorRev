@@ -24,6 +24,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Autowired
     private CustomUserDetailsService userDetailsService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -52,6 +55,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
 
             if (jwtUtil.validateToken(jwt, userDetails)) {
+
+                // Check if user is banned
+                User user = userRepository.findByUsername(username).orElse(null);
+                if (user != null && user.isBanned()) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\":\"Your account has been banned.\"}");
+                    return;
+                }
 
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(

@@ -10,6 +10,7 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -72,6 +73,15 @@ public class OAuth2LoginSuccessHandler
             userRepository.save(user);
         }
 
+        // Check if user is banned
+        if (user.isBanned()) {
+            response.sendRedirect(frontendUrl + "/login?error=banned");
+            return;
+        }
+
+        // Set lastSeen on OAuth login
+        user.setLastSeen(Instant.now());
+        userRepository.save(user);
 
         String token = jwtUtil.generateToken(user.getUsername());
 

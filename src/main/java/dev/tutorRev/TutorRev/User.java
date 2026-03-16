@@ -43,4 +43,10 @@ public class User {
     private Instant verificationCodeExpiry;
 
     private String profilePicture;
+
+    private boolean banned;
+
+    private Instant bannedAt;
+
+    private Instant lastSeen;
 }

@@ -94,6 +94,11 @@ public class AuthController {
                     .body(Map.of("error", "Email already registered"));
         }
 
+        if (userRepository.existsByEmailAndBannedTrue(email)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "This email has been restricted from registration."));
+        }
+
         // Build and save user (unverified)
         User user = new User();
         user.setUsername(username);
@@ -228,6 +233,18 @@ public class AuthController {
                         "error", "Please verify your email before logging in.",
                         "email", user.getEmail()
                     ));
+        }
+
+        // Check if user is banned
+        if (user != null && user.isBanned()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Your account has been banned."));
+        }
+
+        // Set lastSeen on login
+        if (user != null) {
+            user.setLastSeen(Instant.now());
+            userRepository.save(user);
         }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -499,6 +516,21 @@ public class AuthController {
     // Body: { "usernames": ["user1", "user2", ...] }
     // Returns map of username → profilePicture (or null)
     // =========================================================
+    // =========================================================
+    // HEARTBEAT: POST /api/v1/auth/heartbeat
+    // Updates lastSeen for online tracking.
+    // =========================================================
+    @PostMapping("/heartbeat")
+    public ResponseEntity<?> heartbeat(Authentication authentication) {
+        mongoTemplate.updateFirst(
+                org.springframework.data.mongodb.core.query.Query.query(
+                        Criteria.where("username").is(authentication.getName())),
+                new Update().set("lastSeen", Instant.now()),
+                User.class
+        );
+        return ResponseEntity.ok(Map.of("status", "ok"));
+    }
+
     @PostMapping("/avatars")
     public ResponseEntity<?> getAvatars(@RequestBody Map<String, List<String>> payload) {
         List<String> usernames = payload.get("usernames");

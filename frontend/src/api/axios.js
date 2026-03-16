@@ -22,6 +22,13 @@ api.interceptors.response.use(
       localStorage.removeItem('username');
       window.location.href = '/login';
     }
+    // If banned, redirect to login with banned error
+    if (error.response?.status === 403 &&
+        error.response?.data?.error?.includes('banned')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      window.location.href = '/login?error=banned';
+    }
     return Promise.reject(error);
   }
 );

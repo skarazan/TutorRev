@@ -94,6 +94,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/avatars")
                         .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
 
+                        // Heartbeat — any authenticated user (before auth/** wildcard)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/heartbeat")
+                        .hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
+
+                        // Admin panel endpoints — admin only
+                        .requestMatchers("/api/v1/admin/**")
+                        .hasAuthority("ROLE_ADMIN")
+
                         // "/api/v1/auth/**" — the auth endpoints (register, login, logout)
                         // These MUST be public because users can't authenticate
                         // before they've registered or logged in (chicken-and-egg problem).

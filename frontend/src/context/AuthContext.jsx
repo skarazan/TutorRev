@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { login as loginApi, register as registerApi, logout as logoutApi, getMe } from '../api/auth';
+import { sendHeartbeat } from '../api/admin';
 
 const AuthContext = createContext();
 
@@ -33,6 +34,16 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
   }, []);
+
+  // Heartbeat: update lastSeen every 2 minutes while logged in
+  useEffect(() => {
+    if (!token) return;
+    sendHeartbeat().catch(() => {});
+    const interval = setInterval(() => {
+      sendHeartbeat().catch(() => {});
+    }, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   async function loginAction(username, password) {
     const res = await loginApi(username, password);

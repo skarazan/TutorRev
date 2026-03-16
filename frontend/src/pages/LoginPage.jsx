@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { containsProfanity } from '../utils/profanityFilter';
 import { verifyCode as verifyCodeApi, resendCode as resendCodeApi } from '../api/auth';
@@ -20,6 +20,8 @@ export default function LoginPage() {
 
   const { token, loginAction, registerAction } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isBanned = searchParams.get('error') === 'banned';
 
   if (token) return <Navigate to="/dashboard" replace />;
 
@@ -103,6 +105,13 @@ export default function LoginPage() {
           </h1>
           <p className="text-cream-300/60 mt-2">Review tutorials. Learn better.</p>
         </div>
+
+        {/* Banned error */}
+        {isBanned && (
+          <div className="mb-4 p-3 bg-java-600/10 border border-java-600/30 rounded-lg text-java-400 text-sm">
+            Your account has been banned. Contact support for assistance.
+          </div>
+        )}
 
         {/* Card */}
         <div className="bg-dark-700 border border-dark-600 rounded-lg p-6">

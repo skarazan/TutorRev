@@ -48,4 +48,21 @@ public class EmailService {
 
         mailSender.send(message);
     }
+
+    public void sendPasswordResetCode(String toEmail, String code) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(toEmail);
+        message.setSubject("TutorRev password reset");
+        message.setText(
+            "You requested a password reset on TutorRev.\n\n" +
+            "Your reset code is:\n\n" +
+            "    " + code + "\n\n" +
+            "Enter this code on the password reset page to set a new password.\n\n" +
+            "This code expires in 15 minutes.\n\n" +
+            "If you didn't request this, you can safely ignore this email."
+        );
+
+        mailSender.send(message);
+    }
 }

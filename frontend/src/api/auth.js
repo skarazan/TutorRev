@@ -17,3 +17,9 @@ export const verifyCode = (email, code) =>
 
 export const resendCode = (email) =>
   api.post('/api/v1/auth/resend-code', { email });
+
+export const forgotPassword = (email) =>
+  api.post('/api/v1/auth/forgot-password', { email });
+
+export const resetPassword = (email, code, newPassword) =>
+  api.post('/api/v1/auth/reset-password', { email, code, newPassword });

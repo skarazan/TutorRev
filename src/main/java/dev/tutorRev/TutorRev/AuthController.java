@@ -203,6 +203,116 @@ public class AuthController {
     }
 
     // =========================================================
+    // FORGOT PASSWORD: POST /api/v1/auth/forgot-password
+    // Body: { "email": "..." }
+    // Public — sends a reset code to the email if it exists.
+    // =========================================================
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload,
+                                             HttpServletRequest request) {
+        String clientIp = request.getRemoteAddr();
+        if (!rateLimitService.tryConsumeByIp("forgot-pw", clientIp, 3, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many requests. Please try again later."));
+        }
+
+        String email = payload.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Email is required"));
+        }
+
+        User user = userRepository.findByEmail(email.trim()).orElse(null);
+
+        if (user != null && user.isBanned()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "This account has been banned."));
+        }
+
+        // Only allow for local accounts (Google users reset via Google)
+        if (user != null && !"local".equals(user.getProvider())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "This account uses Google sign-in. Please reset your password through Google."));
+        }
+
+        if (user != null) {
+            String code = generateVerificationCode();
+            user.setVerificationCode(code);
+            user.setVerificationCodeExpiry(Instant.now().plus(15, ChronoUnit.MINUTES));
+            userRepository.save(user);
+            emailService.sendPasswordResetCode(email, code);
+        }
+
+        // Intentionally vague to prevent email enumeration
+        return ResponseEntity.ok(
+                Map.of("message", "If that email is registered, a password reset code has been sent."));
+    }
+
+    // =========================================================
+    // RESET PASSWORD: POST /api/v1/auth/reset-password
+    // Body: { "email": "...", "code": "123456", "newPassword": "..." }
+    // Public — verifies code and sets new password.
+    // =========================================================
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload,
+                                            HttpServletRequest request) {
+        String clientIp = request.getRemoteAddr();
+        if (!rateLimitService.tryConsumeByIp("reset-pw", clientIp, 5, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many attempts. Please try again later."));
+        }
+
+        String email = payload.get("email");
+        String code = payload.get("code");
+        String newPassword = payload.get("newPassword");
+
+        if (email == null || code == null || newPassword == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Email, code, and new password are required"));
+        }
+
+        if (newPassword.length() < 6) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Password must be at least 6 characters"));
+        }
+
+        User user = userRepository.findByEmail(email.trim()).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid email or verification code"));
+        }
+
+        if (user.isBanned()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "This account has been banned."));
+        }
+
+        if (user.getVerificationCode() == null || !user.getVerificationCode().equals(code)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid verification code"));
+        }
+
+        if (user.getVerificationCodeExpiry().isBefore(Instant.now())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Verification code has expired. Please request a new one."));
+        }
+
+        // Prevent reusing the same password
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "New password cannot be the same as your current password"));
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setVerificationCode(null);
+        user.setVerificationCodeExpiry(null);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(Map.of("message", "Password reset successful! You can now log in."));
+    }
+
+    // =========================================================
     // LOGIN: POST /api/v1/auth/login
     // =========================================================
     @PostMapping("/login")

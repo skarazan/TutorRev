@@ -27,6 +27,14 @@ public class ReviewService {
         if (rating < 1 || rating > 5) {
             throw new IllegalArgumentException("Rating must be between 1 and 5");
         }
+
+        // Strip HTML tags and validate length
+        reviewBody = InputValidator.stripHtml(reviewBody);
+        String bodyErr = InputValidator.validateReviewBody(reviewBody);
+        if (bodyErr != null) {
+            throw new IllegalArgumentException(bodyErr);
+        }
+
         if (ProfanityFilter.containsProfanity(reviewBody)) {
             throw new IllegalArgumentException("Review contains inappropriate language");
         }
@@ -92,6 +100,14 @@ public class ReviewService {
         if (newRating < 1 || newRating > 5) {
             throw new IllegalArgumentException("Rating must be between 1 and 5");
         }
+
+        // Strip HTML tags and validate length
+        newBody = InputValidator.stripHtml(newBody);
+        String bodyErr = InputValidator.validateReviewBody(newBody);
+        if (bodyErr != null) {
+            throw new IllegalArgumentException(bodyErr);
+        }
+
         if (ProfanityFilter.containsProfanity(newBody)) {
             throw new IllegalArgumentException("Review contains inappropriate language");
         }

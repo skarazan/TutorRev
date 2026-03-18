@@ -79,6 +79,25 @@ public class AuthController {
                     .body(Map.of("error", "username, email, and password are required"));
         }
 
+        // Input validation
+        String usernameErr = InputValidator.validateUsername(username);
+        if (usernameErr != null) {
+            return ResponseEntity.badRequest().body(Map.of("error", usernameErr));
+        }
+
+        String emailErr = InputValidator.validateEmail(email);
+        if (emailErr != null) {
+            return ResponseEntity.badRequest().body(Map.of("error", emailErr));
+        }
+
+        String passwordErr = InputValidator.validatePassword(password);
+        if (passwordErr != null) {
+            return ResponseEntity.badRequest().body(Map.of("error", passwordErr));
+        }
+
+        username = username.trim();
+        email = email.trim();
+
         if (ProfanityFilter.containsProfanity(username)) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Username contains inappropriate language"));
@@ -271,9 +290,9 @@ public class AuthController {
                     .body(Map.of("error", "Email, code, and new password are required"));
         }
 
-        if (newPassword.length() < 6) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Password must be at least 6 characters"));
+        String pwErr = InputValidator.validatePassword(newPassword);
+        if (pwErr != null) {
+            return ResponseEntity.badRequest().body(Map.of("error", pwErr));
         }
 
         User user = userRepository.findByEmail(email.trim()).orElse(null);
@@ -428,9 +447,10 @@ public class AuthController {
         }
 
         String newUsername = payload.get("newUsername");
-        if (newUsername == null || newUsername.isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "New username is required"));
+
+        String usernameErr = InputValidator.validateUsername(newUsername);
+        if (usernameErr != null) {
+            return ResponseEntity.badRequest().body(Map.of("error", usernameErr));
         }
 
         newUsername = newUsername.trim();
@@ -530,9 +550,9 @@ public class AuthController {
                     .body(Map.of("error", "Code and new password are required"));
         }
 
-        if (newPassword.length() < 6) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Password must be at least 6 characters"));
+        String pwErr = InputValidator.validatePassword(newPassword);
+        if (pwErr != null) {
+            return ResponseEntity.badRequest().body(Map.of("error", pwErr));
         }
 
         User user = userRepository.findByUsername(username).orElse(null);

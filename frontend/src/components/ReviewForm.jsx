@@ -3,6 +3,8 @@ import StarRating from './StarRating';
 import { containsProfanity } from '../utils/profanityFilter';
 
 const URL_REGEX = /(https?:\/\/\S+|www\.\S+)/gi;
+const REVIEW_MIN = 10;
+const REVIEW_MAX = 2000;
 
 export default function ReviewForm({ onSubmit, hasReviewed }) {
   const [body, setBody] = useState('');
@@ -21,6 +23,15 @@ export default function ReviewForm({ onSubmit, hasReviewed }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!body.trim() || rating === 0) return;
+
+    if (body.trim().length < REVIEW_MIN) {
+      setError(`Review must be at least ${REVIEW_MIN} characters`);
+      return;
+    }
+    if (body.trim().length > REVIEW_MAX) {
+      setError(`Review cannot exceed ${REVIEW_MAX} characters`);
+      return;
+    }
 
     if (containsProfanity(body)) {
       setError('Review contains inappropriate language');
@@ -58,13 +69,19 @@ export default function ReviewForm({ onSubmit, hasReviewed }) {
       {error && (
         <p className="text-java-400 text-sm">{error}</p>
       )}
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Write your review..."
-        rows={3}
-        className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-3 text-cream-200 placeholder-cream-300/40 focus:outline-none focus:border-coffee-500 transition-colors resize-none text-sm"
-      />
+      <div>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Write your review... (min 10 characters)"
+          rows={3}
+          maxLength={REVIEW_MAX}
+          className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-3 text-cream-200 placeholder-cream-300/40 focus:outline-none focus:border-coffee-500 transition-colors resize-none text-sm"
+        />
+        <p className={`text-xs mt-1 text-right ${body.trim().length > REVIEW_MAX ? 'text-java-400' : 'text-cream-300/30'}`}>
+          {body.trim().length}/{REVIEW_MAX}
+        </p>
+      </div>
       <button
         type="submit"
         disabled={!body.trim() || rating === 0 || submitting}

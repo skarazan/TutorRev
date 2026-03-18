@@ -46,9 +46,34 @@ export default function LoginPage() {
     e.preventDefault();
     clearMessages();
 
-    if (activeTab === 'register' && containsProfanity(username)) {
-      setError('Username contains inappropriate language');
-      return;
+    if (activeTab === 'register') {
+      // Username: 3-20 chars, letters/numbers/underscores/hyphens only
+      if (username.trim().length < 3) {
+        setError('Username must be at least 3 characters');
+        return;
+      }
+      if (username.trim().length > 20) {
+        setError('Username cannot exceed 20 characters');
+        return;
+      }
+      if (!/^[a-zA-Z0-9_-]+$/.test(username.trim())) {
+        setError('Username can only contain letters, numbers, underscores, and hyphens');
+        return;
+      }
+      if (containsProfanity(username)) {
+        setError('Username contains inappropriate language');
+        return;
+      }
+      // Email basic check (browser handles most via type="email")
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
+        setError('Invalid email format');
+        return;
+      }
+      // Password: min 8 chars
+      if (password.length < 8) {
+        setError('Password must be at least 8 characters');
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -129,8 +154,8 @@ export default function LoginPage() {
     e.preventDefault();
     clearMessages();
 
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
 
@@ -353,9 +378,9 @@ export default function LoginPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2 text-cream-200 placeholder-cream-300/40 focus:outline-none focus:border-coffee-500 transition-colors"
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
               />
             </div>
 
@@ -366,7 +391,7 @@ export default function LoginPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2 text-cream-200 placeholder-cream-300/40 focus:outline-none focus:border-coffee-500 transition-colors"
                 placeholder="Confirm your new password"
               />

@@ -112,6 +112,19 @@ export default function ProfilePage() {
       return;
     }
 
+    if (trimmed.length < 3) {
+      setUsernameErr('Username must be at least 3 characters');
+      return;
+    }
+    if (trimmed.length > 20) {
+      setUsernameErr('Username cannot exceed 20 characters');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+      setUsernameErr('Username can only contain letters, numbers, underscores, and hyphens');
+      return;
+    }
+
     if (containsProfanity(trimmed)) {
       setUsernameErr('Username contains inappropriate language');
       return;
@@ -150,8 +163,8 @@ export default function ProfilePage() {
     setPwErr('');
     setPwMsg('');
 
-    if (newPassword.length < 6) {
-      setPwErr('Password must be at least 6 characters');
+    if (newPassword.length < 8) {
+      setPwErr('Password must be at least 8 characters');
       return;
     }
 
@@ -371,7 +384,7 @@ export default function ProfilePage() {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="At least 8 characters"
                   className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-2.5
                              text-cream-200 text-sm placeholder-cream-300/40
                              focus:outline-none focus:border-coffee-500 transition-colors"

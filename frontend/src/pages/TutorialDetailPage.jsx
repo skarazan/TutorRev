@@ -264,6 +264,7 @@ export default function TutorialDetailPage() {
                 avatarUrl={avatarMap[review.username]}
                 currentUsername={user?.username}
                 onReviewUpdate={handleReviewUpdate}
+                tutorialTitle={tutorial?.title}
               />
             ))}
           </div>

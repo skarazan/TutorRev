@@ -23,7 +23,160 @@ function formatTime(instant) {
   return date.toLocaleDateString();
 }
 
-export default function ReviewItem({ review, isAdmin, onDelete, avatarUrl, currentUsername, onReviewUpdate }) {
+// ── Canvas share card ────────────────────────────────────
+function drawStar(ctx, cx, cy, r) {
+  const spikes = 5;
+  const outerR = r;
+  const innerR = r * 0.45;
+  ctx.beginPath();
+  for (let i = 0; i < spikes * 2; i++) {
+    const radius = i % 2 === 0 ? outerR : innerR;
+    const angle = (i * Math.PI) / spikes - Math.PI / 2;
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function wrapText(ctx, text, maxWidth, maxLines) {
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    const test = current ? current + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
+      if (lines.length >= maxLines) {
+        lines[lines.length - 1] += '...';
+        return lines;
+      }
+    } else {
+      current = test;
+    }
+  }
+  if (current) {
+    if (lines.length >= maxLines) {
+      lines[lines.length - 1] += '...';
+    } else {
+      lines.push(current);
+    }
+  }
+  return lines;
+}
+
+function generateShareCard(review, tutorialTitle) {
+  const W = 600;
+  const H = 340;
+  const PAD = 32;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // ── Background
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#1c1714');
+  bg.addColorStop(1, '#110f0d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // ── Top accent bar
+  const accent = ctx.createLinearGradient(0, 0, W, 0);
+  accent.addColorStop(0, '#8B6B4A');
+  accent.addColorStop(1, '#C4956A');
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 0, W, 3);
+
+  // ── Quote mark (decorative)
+  ctx.fillStyle = 'rgba(139, 107, 74, 0.12)';
+  ctx.font = 'bold 120px Georgia, serif';
+  ctx.fillText('\u201C', PAD - 10, 110);
+
+  // ── Tutorial title
+  ctx.fillStyle = '#8B6B4A';
+  ctx.font = '600 12px system-ui, -apple-system, sans-serif';
+  let title = tutorialTitle || 'Tutorial Review';
+  if (title.length > 70) title = title.slice(0, 67) + '...';
+  ctx.fillText(title.toUpperCase(), PAD, 34);
+
+  // ── Divider
+  ctx.strokeStyle = '#2a2520';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD, 46);
+  ctx.lineTo(W - PAD, 46);
+  ctx.stroke();
+
+  // ── Stars
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = i < review.rating ? '#C4956A' : '#2a2520';
+    drawStar(ctx, PAD + 10 + i * 24, 66, 9);
+  }
+
+  // ── Review body
+  ctx.fillStyle = '#e8e0d6';
+  ctx.font = '400 15px system-ui, -apple-system, sans-serif';
+  const lines = wrapText(ctx, review.body, W - PAD * 2, 7);
+  let y = 100;
+  for (const line of lines) {
+    ctx.fillText(line, PAD, y);
+    y += 22;
+  }
+
+  // ── Bottom section
+  const bottomY = H - 28;
+
+  // Username
+  ctx.fillStyle = '#C4956A';
+  ctx.font = '600 13px system-ui, -apple-system, sans-serif';
+  ctx.fillText('— ' + (review.username || 'Anonymous'), PAD, bottomY);
+
+  // Watermark
+  ctx.fillStyle = '#3a3530';
+  ctx.font = '700 13px system-ui, -apple-system, sans-serif';
+  const wm = 'TutorRev.live';
+  const wmW = ctx.measureText(wm).width;
+  ctx.fillText(wm, W - wmW - PAD, bottomY);
+
+  // ── Bottom accent bar
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, H - 3, W, 3);
+
+  return canvas;
+}
+
+async function handleShare(review, tutorialTitle) {
+  const canvas = generateShareCard(review, tutorialTitle);
+
+  try {
+    const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+    const file = new File([blob], 'tutorrev-review.png', { type: 'image/png' });
+
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: 'TutorRev Review',
+        text: `Review by ${review.username} on TutorRev.live`,
+      });
+      return;
+    }
+  } catch {
+    // share cancelled or unsupported
+  }
+
+  // Fallback — download
+  const link = document.createElement('a');
+  link.download = 'tutorrev-review.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// ── Component ────────────────────────────────────────────
+export default function ReviewItem({ review, isAdmin, onDelete, avatarUrl, currentUsername, onReviewUpdate, tutorialTitle }) {
   const [deleting, setDeleting] = useState(false);
   const [liking, setLiking] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -139,6 +292,18 @@ export default function ReviewItem({ review, isAdmin, onDelete, avatarUrl, curre
           <span className="text-cream-300/30 text-xs">{formatTime(review.createdAt)}</span>
         </div>
         <div className="flex items-center gap-2">
+          {!editing && (
+            <button
+              onClick={() => handleShare(review, tutorialTitle)}
+              className="text-xs text-cream-300/40 hover:text-coffee-300 transition-colors"
+              title="Share review as image"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+            </button>
+          )}
           {isOwner && !editing && (
             <button
               onClick={startEdit}

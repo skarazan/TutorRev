@@ -71,7 +71,7 @@ public final class InputValidator {
     }
 
     // ── Review body ───────────────────────────────────────────
-    public static final int REVIEW_MIN = 10;
+    public static final int REVIEW_MIN_WORDS = 10;
     public static final int REVIEW_MAX = 2000;
 
     public static String validateReviewBody(String body) {
@@ -79,8 +79,9 @@ public final class InputValidator {
             return "Review body is required";
         }
         body = body.trim();
-        if (body.length() < REVIEW_MIN) {
-            return "Review must be at least " + REVIEW_MIN + " characters";
+        int wordCount = body.split("\\s+").length;
+        if (wordCount < REVIEW_MIN_WORDS) {
+            return "Review must be at least " + REVIEW_MIN_WORDS + " words";
         }
         if (body.length() > REVIEW_MAX) {
             return "Review cannot exceed " + REVIEW_MAX + " characters";

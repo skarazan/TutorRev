@@ -3,7 +3,7 @@ import StarRating from './StarRating';
 import { containsProfanity } from '../utils/profanityFilter';
 
 const URL_REGEX = /(https?:\/\/\S+|www\.\S+)/gi;
-const REVIEW_MIN = 10;
+const REVIEW_MIN_WORDS = 10;
 const REVIEW_MAX = 2000;
 
 export default function ReviewForm({ onSubmit, hasReviewed }) {
@@ -24,8 +24,9 @@ export default function ReviewForm({ onSubmit, hasReviewed }) {
     e.preventDefault();
     if (!body.trim() || rating === 0) return;
 
-    if (body.trim().length < REVIEW_MIN) {
-      setError(`Review must be at least ${REVIEW_MIN} characters`);
+    const wordCount = body.trim().split(/\s+/).length;
+    if (wordCount < REVIEW_MIN_WORDS) {
+      setError(`Review must be at least ${REVIEW_MIN_WORDS} words`);
       return;
     }
     if (body.trim().length > REVIEW_MAX) {
@@ -73,7 +74,7 @@ export default function ReviewForm({ onSubmit, hasReviewed }) {
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Write your review... (min 10 characters)"
+          placeholder="Write your review... (min 10 words)"
           rows={3}
           maxLength={REVIEW_MAX}
           className="w-full bg-dark-800 border border-dark-600 rounded-lg px-4 py-3 text-cream-200 placeholder-cream-300/40 focus:outline-none focus:border-coffee-500 transition-colors resize-none text-sm"

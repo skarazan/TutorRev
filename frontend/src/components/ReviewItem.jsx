@@ -4,7 +4,7 @@ import { toggleLike, toggleDislike, editReview } from '../api/reviews';
 import { containsProfanity } from '../utils/profanityFilter';
 
 const URL_REGEX = /(https?:\/\/\S+|www\.\S+)/gi;
-const REVIEW_MIN = 10;
+const REVIEW_MIN_WORDS = 10;
 const REVIEW_MAX = 2000;
 
 function formatTime(instant) {
@@ -49,8 +49,9 @@ export default function ReviewItem({ review, isAdmin, onDelete, avatarUrl, curre
   async function saveEdit() {
     if (!editBody.trim() || editRating === 0) return;
 
-    if (editBody.trim().length < REVIEW_MIN) {
-      setEditError(`Review must be at least ${REVIEW_MIN} characters`);
+    const wordCount = editBody.trim().split(/\s+/).length;
+    if (wordCount < REVIEW_MIN_WORDS) {
+      setEditError(`Review must be at least ${REVIEW_MIN_WORDS} words`);
       return;
     }
     if (editBody.trim().length > REVIEW_MAX) {

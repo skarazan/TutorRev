@@ -46,10 +46,10 @@ public class ShareController {
     private static final Color WATERMARK   = new Color(0x3a, 0x35, 0x30);
     private static final Color QUOTE_MARK  = new Color(0x8B, 0x6B, 0x4A, 0x1F); // 12 % alpha
 
-    // ── Card dimensions ────────────────────────────────────
-    private static final int W   = 600;
-    private static final int H   = 340;
-    private static final int PAD = 32;
+    // ── Card dimensions (2x for crisp rendering on high-DPI / Discord)
+    private static final int W   = 1200;
+    private static final int H   = 680;
+    private static final int PAD = 64;
 
     /* ─────────────────────────────────────────────────────────
        GET /api/v1/share/review/{reviewId}/card.png
@@ -129,8 +129,8 @@ public class ShareController {
                 + "<meta property=\"og:title\" content=\"" + stars + " Review on TutorRev\" />"
                 + "<meta property=\"og:description\" content=\"" + desc + " — " + review.getUsername() + "\" />"
                 + "<meta property=\"og:image\" content=\"" + apiCardUrl + "\" />"
-                + "<meta property=\"og:image:width\" content=\"600\" />"
-                + "<meta property=\"og:image:height\" content=\"340\" />"
+                + "<meta property=\"og:image:width\" content=\"1200\" />"
+                + "<meta property=\"og:image:height\" content=\"680\" />"
                 + "<meta property=\"og:url\" content=\"" + apiBase + "/api/v1/share/review/" + reviewId + "\" />"
                 + "<meta property=\"og:image:type\" content=\"image/png\" />"
                 + "<meta property=\"og:site_name\" content=\"TutorRev\" />"
@@ -170,60 +170,60 @@ public class ShareController {
         // ── Top accent bar
         GradientPaint accentGrad = new GradientPaint(0, 0, ACCENT_L, W, 0, ACCENT_R);
         g.setPaint(accentGrad);
-        g.fillRect(0, 0, W, 3);
+        g.fillRect(0, 0, W, 6);
 
         // ── Decorative quote mark
         g.setColor(QUOTE_MARK);
-        g.setFont(new Font(Font.SERIF, Font.BOLD, 120));
-        g.drawString("\u201C", PAD - 10, 110);
+        g.setFont(new Font(Font.SERIF, Font.BOLD, 240));
+        g.drawString("\u201C", PAD - 20, 220);
 
         // ── Tutorial title
         g.setColor(ACCENT_L);
-        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
         String title = tutorialTitle;
         if (title.length() > 70) title = title.substring(0, 67) + "...";
-        g.drawString(title.toUpperCase(), PAD, 34);
+        g.drawString(title.toUpperCase(), PAD, 68);
 
         // ── Divider
         g.setColor(DIVIDER);
-        g.setStroke(new BasicStroke(1));
-        g.drawLine(PAD, 46, W - PAD, 46);
+        g.setStroke(new BasicStroke(2));
+        g.drawLine(PAD, 92, W - PAD, 92);
 
         // ── Stars
         for (int i = 0; i < 5; i++) {
             g.setColor(i < review.getRating() ? ACCENT_R : STAR_EMPTY);
-            fillStar(g, PAD + 10 + i * 24, 66, 9);
+            fillStar(g, PAD + 20 + i * 48, 132, 18);
         }
 
         // ── Review body (word-wrapped, max 7 lines)
         g.setColor(TEXT_BODY);
-        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 15));
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 30));
         List<String> lines = wrapText(g, review.getBody(), W - PAD * 2, 7);
-        int y = 100;
+        int y = 200;
         for (String line : lines) {
             g.drawString(line, PAD, y);
-            y += 22;
+            y += 44;
         }
 
         // ── Bottom section
-        int bottomY = H - 28;
+        int bottomY = H - 56;
 
         // Username
         g.setColor(ACCENT_R);
-        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 26));
         String user = "— " + (review.getUsername() != null ? review.getUsername() : "Anonymous");
         g.drawString(user, PAD, bottomY);
 
         // Watermark
         g.setColor(WATERMARK);
-        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 26));
         String wm = "TutorRev.live";
         int wmW = g.getFontMetrics().stringWidth(wm);
         g.drawString(wm, W - wmW - PAD, bottomY);
 
         // ── Bottom accent bar
         g.setPaint(accentGrad);
-        g.fillRect(0, H - 3, W, 3);
+        g.fillRect(0, H - 6, W, 6);
 
         g.dispose();
 

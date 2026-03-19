@@ -150,7 +150,8 @@ function generateShareCard(review, tutorialTitle) {
 }
 
 function getShareUrl(reviewId) {
-  const base = window.location.origin;
+  // The share/OG endpoint lives on the backend (VITE_API_URL), not the frontend origin
+  const base = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '');
   return `${base}/api/v1/share/review/${reviewId}`;
 }
 

@@ -99,12 +99,20 @@ public class ShareController {
         String tutorialTitle = tutOpt.map(Tutorials::getTitle).orElse("Tutorial Review");
         String tutorialId = tutOpt.map(Tutorials::getId).orElse("");
 
-        // Build base URL from the incoming request so it works in dev and prod
-        String baseUrl = frontendUrl.replaceAll("/+$", "");
-        String apiCardUrl = baseUrl + "/api/v1/share/review/" + reviewId + "/card.png";
+        // Derive the backend's own public URL from the incoming request.
+        // On Render the X-Forwarded-* headers give us the real scheme + host.
+        String scheme = request.getHeader("X-Forwarded-Proto");
+        if (scheme == null) scheme = request.getScheme();
+        String host = request.getHeader("X-Forwarded-Host");
+        if (host == null) host = request.getHeader("Host");
+        if (host == null) host = request.getServerName() + ":" + request.getServerPort();
+        String apiBase = scheme + "://" + host;
 
-        // Build redirect target — send user to the SPA tutorial page scrolled to the review
-        String redirectUrl = baseUrl + "/tutorials/" + tutorialId + "#review-" + reviewId;
+        String apiCardUrl = apiBase + "/api/v1/share/review/" + reviewId + "/card.png";
+
+        // Redirect target — the React SPA on the frontend domain
+        String feBase = frontendUrl.replaceAll("/+$", "");
+        String redirectUrl = feBase + "/tutorials/" + tutorialId + "#review-" + reviewId;
 
         // Truncate body for description
         String desc = review.getBody();
@@ -123,7 +131,7 @@ public class ShareController {
                 + "<meta property=\"og:image\" content=\"" + apiCardUrl + "\" />"
                 + "<meta property=\"og:image:width\" content=\"600\" />"
                 + "<meta property=\"og:image:height\" content=\"340\" />"
-                + "<meta property=\"og:url\" content=\"" + baseUrl + "/api/v1/share/review/" + reviewId + "\" />"
+                + "<meta property=\"og:url\" content=\"" + apiBase + "/api/v1/share/review/" + reviewId + "\" />"
                 + "<meta property=\"og:image:type\" content=\"image/png\" />"
                 + "<meta property=\"og:site_name\" content=\"TutorRev\" />"
                 + "<meta name=\"twitter:card\" content=\"summary_large_image\" />"

@@ -76,6 +76,10 @@ public class SecurityConfig {
                         // This just returns 17, it's a health check — keep it public.
                         .requestMatchers("/").permitAll()
 
+                        // SPA fallback + static frontend assets — must be public so
+                        // React index.html, JS/CSS bundles, and the error handler work.
+                        .requestMatchers("/error", "/index.html", "/assets/**", "/favicon.ico").permitAll()
+
                         // Public share endpoints — OG meta pages + card images for
                         // Discord / Twitter / social media embeds (no auth required).
                         .requestMatchers(HttpMethod.GET, "/api/v1/share/**").permitAll()

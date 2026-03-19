@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getTutorial, deleteTutorial } from '../api/tutorials';
 import { createReview, deleteReview } from '../api/reviews';
 import { getAvatars } from '../api/profile';
@@ -13,6 +13,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 export default function TutorialDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAdmin } = useAuth();
 
   const [tutorial, setTutorial] = useState(null);
@@ -53,6 +54,23 @@ export default function TutorialDetailPage() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  // Scroll to review anchor from hash (e.g. #review-abc123)
+  useEffect(() => {
+    if (!loading && tutorial && location.hash) {
+      // Small delay to let reviews render
+      const timer = setTimeout(() => {
+        const el = document.querySelector(location.hash);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Brief highlight effect
+          el.classList.add('ring-2', 'ring-coffee-500/60');
+          setTimeout(() => el.classList.remove('ring-2', 'ring-coffee-500/60'), 3000);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, tutorial, location.hash]);
 
   const reviews = tutorial?.reviewIds || [];
 

@@ -76,6 +76,10 @@ public class SecurityConfig {
                         // This just returns 17, it's a health check — keep it public.
                         .requestMatchers("/").permitAll()
 
+                        // Public share endpoints — OG meta pages + card images for
+                        // Discord / Twitter / social media embeds (no auth required).
+                        .requestMatchers(HttpMethod.GET, "/api/v1/share/**").permitAll()
+
                         // PUT /api/v1/auth/promote/{username} — admin only
                         // Must come BEFORE the auth wildcard below, otherwise
                         // permitAll() would match first and anyone could promote users.

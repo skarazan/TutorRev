@@ -149,26 +149,39 @@ function generateShareCard(review, tutorialTitle) {
   return canvas;
 }
 
+function getShareUrl(reviewId) {
+  const base = window.location.origin;
+  return `${base}/api/v1/share/review/${reviewId}`;
+}
+
 async function handleShare(review, tutorialTitle) {
-  const canvas = generateShareCard(review, tutorialTitle);
+  const shareUrl = getShareUrl(review.reviewId);
 
-  try {
-    const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
-    const file = new File([blob], 'tutorrev-review.png', { type: 'image/png' });
-
-    if (navigator.canShare?.({ files: [file] })) {
+  // Try native share first (mobile) with URL
+  if (navigator.share) {
+    try {
       await navigator.share({
-        files: [file],
         title: 'TutorRev Review',
         text: `Review by ${review.username} on TutorRev.live`,
+        url: shareUrl,
       });
-      return;
+      return 'shared';
+    } catch {
+      // cancelled or unsupported — fall through to clipboard
     }
-  } catch {
-    // share cancelled or unsupported
   }
 
-  // Fallback — download
+  // Fallback — copy link to clipboard
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    return 'copied';
+  } catch {
+    return 'failed';
+  }
+}
+
+async function handleDownloadCard(review, tutorialTitle) {
+  const canvas = generateShareCard(review, tutorialTitle);
   const link = document.createElement('a');
   link.download = 'tutorrev-review.png';
   link.href = canvas.toDataURL('image/png');
@@ -184,6 +197,7 @@ export default function ReviewItem({ review, isAdmin, onDelete, avatarUrl, curre
   const [editRating, setEditRating] = useState(0);
   const [editError, setEditError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [shareStatus, setShareStatus] = useState(null); // null | 'copied' | 'shared' | 'failed'
 
   const isOwner = currentUsername && review.username === currentUsername;
 
@@ -276,8 +290,16 @@ export default function ReviewItem({ review, isAdmin, onDelete, avatarUrl, curre
   const isLiked = review.likedBy?.includes(currentUsername);
   const isDisliked = review.dislikedBy?.includes(currentUsername);
 
+  async function onShareClick() {
+    const result = await handleShare(review, tutorialTitle);
+    setShareStatus(result);
+    if (result === 'copied') {
+      setTimeout(() => setShareStatus(null), 2000);
+    }
+  }
+
   return (
-    <div className="bg-dark-800 border border-dark-600 rounded-lg p-4">
+    <div id={`review-${review.reviewId}`} className="bg-dark-800 border border-dark-600 rounded-lg p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {avatarUrl ? (
@@ -293,16 +315,33 @@ export default function ReviewItem({ review, isAdmin, onDelete, avatarUrl, curre
         </div>
         <div className="flex items-center gap-2">
           {!editing && (
-            <button
-              onClick={() => handleShare(review, tutorialTitle)}
-              className="text-xs text-cream-300/40 hover:text-coffee-300 transition-colors"
-              title="Share review as image"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-1">
+              {shareStatus === 'copied' && (
+                <span className="text-xs text-emerald-400 animate-pulse">Copied!</span>
+              )}
+              <button
+                onClick={onShareClick}
+                className="text-xs text-cream-300/40 hover:text-coffee-300 transition-colors"
+                title="Copy share link"
+              >
+                {/* Link icon */}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </button>
+              <button
+                onClick={() => handleDownloadCard(review, tutorialTitle)}
+                className="text-xs text-cream-300/40 hover:text-coffee-300 transition-colors"
+                title="Download review card"
+              >
+                {/* Download icon */}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </button>
+            </div>
           )}
           {isOwner && !editing && (
             <button

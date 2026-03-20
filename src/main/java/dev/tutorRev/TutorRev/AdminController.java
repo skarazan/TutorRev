@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -18,6 +19,9 @@ public class AdminController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private OnlineSnapshotRepository snapshotRepository;
 
     @GetMapping("/stats")
     public ResponseEntity<?> getDashboardStats() {
@@ -142,5 +146,32 @@ public class AdminController {
         userRepository.save(user);
 
         return ResponseEntity.ok(Map.of("message", username + " has been unbanned"));
+    }
+
+    // ── Online Snapshot Endpoints ──────────────────────────────────────
+
+    @PostMapping("/online-snapshot")
+    public ResponseEntity<?> recordOnlineSnapshot(@RequestBody Map<String, Integer> body) {
+        int onlineCount = body.getOrDefault("onlineCount", 0);
+
+        // Throttle: skip if last snapshot was less than 4 minutes ago
+        Optional<OnlineSnapshot> latest = snapshotRepository.findTopByOrderByTimestampDesc();
+        if (latest.isPresent()) {
+            Instant fourMinAgo = Instant.now().minus(4, ChronoUnit.MINUTES);
+            if (latest.get().getTimestamp().isAfter(fourMinAgo)) {
+                return ResponseEntity.ok(Map.of("status", "skipped", "reason", "Too soon since last snapshot"));
+            }
+        }
+
+        OnlineSnapshot snapshot = new OnlineSnapshot(Instant.now(), onlineCount);
+        snapshotRepository.save(snapshot);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("status", "saved"));
+    }
+
+    @GetMapping("/online-history")
+    public ResponseEntity<?> getOnlineHistory() {
+        Instant cutoff = Instant.now().minus(24, ChronoUnit.HOURS);
+        List<OnlineSnapshot> snapshots = snapshotRepository.findByTimestampAfterOrderByTimestampAsc(cutoff);
+        return ResponseEntity.ok(snapshots);
     }
 }

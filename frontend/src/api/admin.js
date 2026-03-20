@@ -17,3 +17,9 @@ export const unbanUser = (username) =>
 
 export const sendHeartbeat = () =>
   api.post('/api/v1/auth/heartbeat');
+
+export const getOnlineHistory = () =>
+  api.get('/api/v1/admin/online-history');
+
+export const recordOnlineSnapshot = (onlineCount) =>
+  api.post('/api/v1/admin/online-snapshot', { onlineCount });

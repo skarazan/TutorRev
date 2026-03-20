@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { getAdminStats, getAllUsers, getUserProfile, banUser, unbanUser } from '../api/admin';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { getAdminStats, getAllUsers, getUserProfile, banUser, unbanUser, getOnlineHistory, recordOnlineSnapshot } from '../api/admin';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function AdminPanelPage() {
@@ -11,6 +11,8 @@ export default function AdminPanelPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [actionLoading, setActionLoading] = useState('');
+  const [chartData, setChartData] = useState([]);
+  const canvasRef = useRef(null);
 
   function fetchData() {
     return Promise.all([getAdminStats(), getAllUsers()])
@@ -26,15 +28,155 @@ export default function AdminPanelPage() {
     fetchData();
   }, []);
 
-  // Auto-refresh stats every 30s
+  // Load chart history on mount
+  useEffect(() => {
+    getOnlineHistory()
+      .then((res) => setChartData(res.data))
+      .catch(() => {});
+  }, []);
+
+  // Auto-refresh stats every 30s + record snapshot for chart
   useEffect(() => {
     const interval = setInterval(() => {
       getAdminStats()
-        .then((res) => setStats(res.data))
+        .then((res) => {
+          setStats(res.data);
+          // Record snapshot (backend throttles to 1 per 4 min)
+          recordOnlineSnapshot(res.data.onlineCount)
+            .then((snapRes) => {
+              if (snapRes.data.status === 'saved') {
+                // Append new datapoint to chart
+                setChartData((prev) => [
+                  ...prev,
+                  { timestamp: new Date().toISOString(), onlineCount: res.data.onlineCount },
+                ]);
+              }
+            })
+            .catch(() => {});
+        })
         .catch(() => {});
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // ── Canvas chart drawing ──────────────────────────────────────────
+  const drawChart = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || chartData.length === 0) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const W = rect.width;
+    const H = rect.height;
+    const PAD_LEFT = 45;
+    const PAD_RIGHT = 20;
+    const PAD_TOP = 20;
+    const PAD_BOTTOM = 30;
+    const chartW = W - PAD_LEFT - PAD_RIGHT;
+    const chartH = H - PAD_TOP - PAD_BOTTOM;
+
+    // Clear
+    ctx.clearRect(0, 0, W, H);
+
+    // Parse data
+    const points = chartData.map((d) => ({
+      time: new Date(d.timestamp).getTime(),
+      count: d.onlineCount,
+    }));
+
+    const minTime = points[0].time;
+    const maxTime = points[points.length - 1].time;
+    const timeRange = maxTime - minTime || 1;
+    const maxCount = Math.max(...points.map((p) => p.count), 1);
+    const yMax = Math.ceil(maxCount * 1.2) || 2;
+
+    // Grid lines (horizontal)
+    const ySteps = Math.min(yMax, 5);
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= ySteps; i++) {
+      const y = PAD_TOP + chartH - (i / ySteps) * chartH;
+      ctx.beginPath();
+      ctx.moveTo(PAD_LEFT, y);
+      ctx.lineTo(W - PAD_RIGHT, y);
+      ctx.stroke();
+
+      // Y labels
+      const val = Math.round((i / ySteps) * yMax);
+      ctx.fillStyle = 'rgba(232,221,203,0.35)';
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(val, PAD_LEFT - 8, y + 4);
+    }
+
+    // X labels (up to 6 evenly spaced)
+    const xLabelCount = Math.min(points.length, 6);
+    ctx.fillStyle = 'rgba(232,221,203,0.35)';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < xLabelCount; i++) {
+      const idx = Math.round((i / (xLabelCount - 1)) * (points.length - 1));
+      const p = points[idx];
+      const x = PAD_LEFT + ((p.time - minTime) / timeRange) * chartW;
+      const d = new Date(p.time);
+      const label = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+      ctx.fillText(label, x, H - 8);
+    }
+
+    // Map points to canvas coords
+    const coords = points.map((p) => ({
+      x: PAD_LEFT + ((p.time - minTime) / timeRange) * chartW,
+      y: PAD_TOP + chartH - (p.count / yMax) * chartH,
+    }));
+
+    // Area fill (gradient)
+    const grad = ctx.createLinearGradient(0, PAD_TOP, 0, PAD_TOP + chartH);
+    grad.addColorStop(0, 'rgba(16,185,129,0.25)');
+    grad.addColorStop(1, 'rgba(16,185,129,0.02)');
+    ctx.beginPath();
+    ctx.moveTo(coords[0].x, PAD_TOP + chartH);
+    coords.forEach((c) => ctx.lineTo(c.x, c.y));
+    ctx.lineTo(coords[coords.length - 1].x, PAD_TOP + chartH);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    ctx.moveTo(coords[0].x, coords[0].y);
+    for (let i = 1; i < coords.length; i++) {
+      ctx.lineTo(coords[i].x, coords[i].y);
+    }
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Dots
+    coords.forEach((c) => {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#10b981';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fill();
+    });
+  }, [chartData]);
+
+  useEffect(() => {
+    drawChart();
+    const handleResize = () => drawChart();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [drawChart]);
 
   async function handleViewProfile(username) {
     if (selectedUser === username) {
@@ -129,6 +271,30 @@ export default function AdminPanelPage() {
           </div>
         </div>
       )}
+
+      {/* Online Users Chart */}
+      <div className="bg-dark-700 border border-dark-600 rounded-lg p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-cream-100 font-semibold">Online Users — Last 24 Hours</h2>
+            <p className="text-cream-300/40 text-xs mt-0.5">Datapoints recorded every 4 minutes</p>
+          </div>
+          {chartData.length > 0 && (
+            <span className="text-cream-300/30 text-xs">{chartData.length} datapoints</span>
+          )}
+        </div>
+        {chartData.length === 0 ? (
+          <div className="flex items-center justify-center h-[200px] text-cream-300/30 text-sm">
+            No chart data yet — datapoints will appear as you stay on this page
+          </div>
+        ) : (
+          <canvas
+            ref={canvasRef}
+            className="w-full"
+            style={{ height: '200px' }}
+          />
+        )}
+      </div>
 
       {/* Online Users */}
       {stats && stats.onlineUsers.length > 0 && (

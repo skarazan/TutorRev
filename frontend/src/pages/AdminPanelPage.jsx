@@ -11,8 +11,17 @@ export default function AdminPanelPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [actionLoading, setActionLoading] = useState('');
-  const [chartData, setChartData] = useState([]);
-  const [chartStats, setChartStats] = useState(null);
+  // Hydrate chart from localStorage cache instantly
+  const cached = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('chartCache');
+      if (raw) return JSON.parse(raw);
+    } catch { /* ignore */ }
+    return null;
+  }, []);
+
+  const [chartData, setChartData] = useState(cached?.points || []);
+  const [chartStats, setChartStats] = useState(cached?.stats || null);
   const canvasRef = useRef(null);
 
   function fetchData() {
@@ -32,13 +41,17 @@ export default function AdminPanelPage() {
   function fetchChartData() {
     return getOnlineHistory()
       .then((res) => {
-        setChartData(res.data.points || []);
-        setChartStats({ today: res.data.today, week: res.data.week, month: res.data.month });
+        const points = res.data.points || [];
+        const stats = { today: res.data.today, week: res.data.week, month: res.data.month };
+        setChartData(points);
+        setChartStats(stats);
+        // Cache for instant load next time
+        try { localStorage.setItem('chartCache', JSON.stringify({ points, stats })); } catch { /* quota */ }
       })
       .catch(() => {});
   }
 
-  // Load chart history on mount
+  // Load fresh chart data on mount (renders cached data instantly, then updates)
   useEffect(() => {
     fetchChartData();
   }, []);
@@ -238,8 +251,6 @@ export default function AdminPanelPage() {
     );
   }, [users, search]);
 
-  if (loading) return <LoadingSpinner />;
-
   return (
     <div className="max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold text-cream-100 mb-2">Admin Panel</h1>
@@ -253,7 +264,7 @@ export default function AdminPanelPage() {
       )}
 
       {/* Stats Cards */}
-      {stats && (
+      {stats ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-dark-700 border border-dark-600 rounded-lg p-5">
             <p className="text-cream-300/50 text-xs uppercase tracking-wider mb-1">Total Users</p>
@@ -271,6 +282,15 @@ export default function AdminPanelPage() {
             <p className="text-cream-300/50 text-xs uppercase tracking-wider mb-1">Admins Online</p>
             <p className="text-3xl font-bold text-coffee-300">{stats.onlineAdminCount}</p>
           </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-dark-700 border border-dark-600 rounded-lg p-5 animate-pulse">
+              <div className="h-3 w-20 bg-dark-600 rounded mb-3" />
+              <div className="h-8 w-12 bg-dark-600 rounded" />
+            </div>
+          ))}
         </div>
       )}
 
@@ -376,129 +396,133 @@ export default function AdminPanelPage() {
       )}
 
       {/* All Users */}
-      <div className="bg-dark-700 border border-dark-600 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-cream-100 font-semibold">
-            All Users
-            <span className="text-cream-300/40 text-sm font-normal ml-2">({users.length})</span>
-          </h2>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search users..."
-            className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-cream-200 text-sm
-                       placeholder-cream-300/30 focus:outline-none focus:border-coffee-500 transition-colors w-48"
-          />
-        </div>
+      {loading ? (
+        <LoadingSpinner />
+      ) : (
+        <div className="bg-dark-700 border border-dark-600 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-cream-100 font-semibold">
+              All Users
+              <span className="text-cream-300/40 text-sm font-normal ml-2">({users.length})</span>
+            </h2>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search users..."
+              className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-cream-200 text-sm
+                         placeholder-cream-300/30 focus:outline-none focus:border-coffee-500 transition-colors w-48"
+            />
+          </div>
 
-        <div className="space-y-2">
-          {filteredUsers.map((u) => (
-            <div key={u.username}>
-              <div className="flex items-center justify-between bg-dark-800 border border-dark-600 rounded-lg p-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <button
-                    onClick={() => handleViewProfile(u.username)}
-                    className="text-coffee-300 hover:text-coffee-400 text-sm font-medium truncate transition-colors"
-                  >
-                    {u.username}
-                  </button>
-                  <span className="text-cream-300/30 text-xs hidden sm:inline truncate">{u.email}</span>
-                  {u.roles?.includes('ROLE_ADMIN') && (
-                    <span className="text-[10px] bg-coffee-500/20 text-coffee-300 px-2 py-0.5 rounded-full shrink-0">
-                      Admin
-                    </span>
-                  )}
-                  {u.banned && (
-                    <span className="text-[10px] bg-java-600/20 text-java-400 px-2 py-0.5 rounded-full shrink-0">
-                      Banned
-                    </span>
-                  )}
-                </div>
-                <div className="shrink-0 ml-3">
-                  {!u.roles?.includes('ROLE_ADMIN') && (
-                    u.banned ? (
-                      <button
-                        onClick={() => handleUnban(u.username)}
-                        disabled={actionLoading === u.username}
-                        className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-50"
-                      >
-                        {actionLoading === u.username ? '...' : 'Unban'}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleBan(u.username)}
-                        disabled={actionLoading === u.username}
-                        className="text-xs text-java-400/60 hover:text-java-400 transition-colors disabled:opacity-50"
-                      >
-                        {actionLoading === u.username ? '...' : 'Ban'}
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
-
-              {/* Expanded Profile */}
-              {selectedUser === u.username && selectedProfile && (
-                <div className="mt-1 bg-dark-800/50 border border-dark-600 rounded-lg p-4 ml-4">
-                  <div className="flex items-start gap-4">
-                    {selectedProfile.profilePicture ? (
-                      <img
-                        src={selectedProfile.profilePicture}
-                        alt=""
-                        className="w-16 h-16 rounded-full object-cover shrink-0"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-full bg-coffee-500 flex items-center justify-center text-xl text-cream-100 font-medium shrink-0">
-                        {selectedProfile.username?.charAt(0)?.toUpperCase()}
-                      </div>
+          <div className="space-y-2">
+            {filteredUsers.map((u) => (
+              <div key={u.username}>
+                <div className="flex items-center justify-between bg-dark-800 border border-dark-600 rounded-lg p-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <button
+                      onClick={() => handleViewProfile(u.username)}
+                      className="text-coffee-300 hover:text-coffee-400 text-sm font-medium truncate transition-colors"
+                    >
+                      {u.username}
+                    </button>
+                    <span className="text-cream-300/30 text-xs hidden sm:inline truncate">{u.email}</span>
+                    {u.roles?.includes('ROLE_ADMIN') && (
+                      <span className="text-[10px] bg-coffee-500/20 text-coffee-300 px-2 py-0.5 rounded-full shrink-0">
+                        Admin
+                      </span>
                     )}
-                    <div className="space-y-1.5 text-sm min-w-0">
-                      <p className="text-cream-100 font-medium">{selectedProfile.username}</p>
-                      <p className="text-cream-300/60">{selectedProfile.email}</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedProfile.roles?.map((r) => (
-                          <span
-                            key={r}
-                            className="text-[10px] bg-coffee-500/20 text-coffee-300 px-2 py-0.5 rounded-full"
-                          >
-                            {r.replace('ROLE_', '')}
-                          </span>
-                        ))}
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                          selectedProfile.banned
-                            ? 'bg-java-600/20 text-java-400'
-                            : 'bg-emerald-500/20 text-emerald-400'
-                        }`}>
-                          {selectedProfile.banned ? 'Banned' : 'Active'}
-                        </span>
-                      </div>
-                      <p className="text-cream-300/40 text-xs">
-                        Provider: {selectedProfile.provider}
-                        {selectedProfile.emailVerified ? ' · Email verified' : ' · Email not verified'}
-                      </p>
-                      {selectedProfile.lastSeen && (
-                        <p className="text-cream-300/40 text-xs">
-                          Last seen: {new Date(selectedProfile.lastSeen).toLocaleString()}
-                        </p>
-                      )}
-                      {selectedProfile.bannedAt && (
-                        <p className="text-java-400/60 text-xs">
-                          Banned at: {new Date(selectedProfile.bannedAt).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
+                    {u.banned && (
+                      <span className="text-[10px] bg-java-600/20 text-java-400 px-2 py-0.5 rounded-full shrink-0">
+                        Banned
+                      </span>
+                    )}
+                  </div>
+                  <div className="shrink-0 ml-3">
+                    {!u.roles?.includes('ROLE_ADMIN') && (
+                      u.banned ? (
+                        <button
+                          onClick={() => handleUnban(u.username)}
+                          disabled={actionLoading === u.username}
+                          className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-50"
+                        >
+                          {actionLoading === u.username ? '...' : 'Unban'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleBan(u.username)}
+                          disabled={actionLoading === u.username}
+                          className="text-xs text-java-400/60 hover:text-java-400 transition-colors disabled:opacity-50"
+                        >
+                          {actionLoading === u.username ? '...' : 'Ban'}
+                        </button>
+                      )
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
 
-        {filteredUsers.length === 0 && (
-          <p className="text-cream-300/40 text-sm text-center py-6">No users found</p>
-        )}
-      </div>
+                {/* Expanded Profile */}
+                {selectedUser === u.username && selectedProfile && (
+                  <div className="mt-1 bg-dark-800/50 border border-dark-600 rounded-lg p-4 ml-4">
+                    <div className="flex items-start gap-4">
+                      {selectedProfile.profilePicture ? (
+                        <img
+                          src={selectedProfile.profilePicture}
+                          alt=""
+                          className="w-16 h-16 rounded-full object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-coffee-500 flex items-center justify-center text-xl text-cream-100 font-medium shrink-0">
+                          {selectedProfile.username?.charAt(0)?.toUpperCase()}
+                        </div>
+                      )}
+                      <div className="space-y-1.5 text-sm min-w-0">
+                        <p className="text-cream-100 font-medium">{selectedProfile.username}</p>
+                        <p className="text-cream-300/60">{selectedProfile.email}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedProfile.roles?.map((r) => (
+                            <span
+                              key={r}
+                              className="text-[10px] bg-coffee-500/20 text-coffee-300 px-2 py-0.5 rounded-full"
+                            >
+                              {r.replace('ROLE_', '')}
+                            </span>
+                          ))}
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                            selectedProfile.banned
+                              ? 'bg-java-600/20 text-java-400'
+                              : 'bg-emerald-500/20 text-emerald-400'
+                          }`}>
+                            {selectedProfile.banned ? 'Banned' : 'Active'}
+                          </span>
+                        </div>
+                        <p className="text-cream-300/40 text-xs">
+                          Provider: {selectedProfile.provider}
+                          {selectedProfile.emailVerified ? ' · Email verified' : ' · Email not verified'}
+                        </p>
+                        {selectedProfile.lastSeen && (
+                          <p className="text-cream-300/40 text-xs">
+                            Last seen: {new Date(selectedProfile.lastSeen).toLocaleString()}
+                          </p>
+                        )}
+                        {selectedProfile.bannedAt && (
+                          <p className="text-java-400/60 text-xs">
+                            Banned at: {new Date(selectedProfile.bannedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {filteredUsers.length === 0 && (
+            <p className="text-cream-300/40 text-sm text-center py-6">No users found</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

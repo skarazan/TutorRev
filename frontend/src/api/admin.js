@@ -20,6 +20,3 @@ export const sendHeartbeat = () =>
 
 export const getOnlineHistory = () =>
   api.get('/api/v1/admin/online-history');
-
-export const recordOnlineSnapshot = (onlineCount) =>
-  api.post('/api/v1/admin/online-snapshot', { onlineCount });

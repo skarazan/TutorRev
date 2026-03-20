@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { getAdminStats, getAllUsers, getUserProfile, banUser, unbanUser, getOnlineHistory, recordOnlineSnapshot } from '../api/admin';
+import { getAdminStats, getAllUsers, getUserProfile, banUser, unbanUser, getOnlineHistory } from '../api/admin';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function AdminPanelPage() {
@@ -35,28 +35,24 @@ export default function AdminPanelPage() {
       .catch(() => {});
   }, []);
 
-  // Auto-refresh stats every 30s + record snapshot for chart
+  // Auto-refresh stats every 30s + refresh chart data every 60s
   useEffect(() => {
-    const interval = setInterval(() => {
+    const statsInterval = setInterval(() => {
       getAdminStats()
-        .then((res) => {
-          setStats(res.data);
-          // Record snapshot (backend throttles to 1 per 4 min)
-          recordOnlineSnapshot(res.data.onlineCount)
-            .then((snapRes) => {
-              if (snapRes.data.status === 'saved') {
-                // Append new datapoint to chart
-                setChartData((prev) => [
-                  ...prev,
-                  { timestamp: new Date().toISOString(), onlineCount: res.data.onlineCount },
-                ]);
-              }
-            })
-            .catch(() => {});
-        })
+        .then((res) => setStats(res.data))
         .catch(() => {});
     }, 30000);
-    return () => clearInterval(interval);
+
+    const chartInterval = setInterval(() => {
+      getOnlineHistory()
+        .then((res) => setChartData(res.data))
+        .catch(() => {});
+    }, 60000);
+
+    return () => {
+      clearInterval(statsInterval);
+      clearInterval(chartInterval);
+    };
   }, []);
 
   // ── Canvas chart drawing ──────────────────────────────────────────
@@ -277,7 +273,7 @@ export default function AdminPanelPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-cream-100 font-semibold">Online Users — Last 24 Hours</h2>
-            <p className="text-cream-300/40 text-xs mt-0.5">Datapoints recorded every 4 minutes</p>
+            <p className="text-cream-300/40 text-xs mt-0.5">Datapoints recorded every minute</p>
           </div>
           {chartData.length > 0 && (
             <span className="text-cream-300/30 text-xs">{chartData.length} datapoints</span>
@@ -285,7 +281,7 @@ export default function AdminPanelPage() {
         </div>
         {chartData.length === 0 ? (
           <div className="flex items-center justify-center h-[200px] text-cream-300/30 text-sm">
-            No chart data yet — datapoints will appear as you stay on this page
+            No chart data yet — the server records a datapoint every minute automatically
           </div>
         ) : (
           <canvas

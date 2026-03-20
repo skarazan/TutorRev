@@ -11,7 +11,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -149,24 +148,8 @@ public class AdminController {
     }
 
     // ── Online Snapshot Endpoints ──────────────────────────────────────
-
-    @PostMapping("/online-snapshot")
-    public ResponseEntity<?> recordOnlineSnapshot(@RequestBody Map<String, Integer> body) {
-        int onlineCount = body.getOrDefault("onlineCount", 0);
-
-        // Throttle: skip if last snapshot was less than 4 minutes ago
-        Optional<OnlineSnapshot> latest = snapshotRepository.findTopByOrderByTimestampDesc();
-        if (latest.isPresent()) {
-            Instant fourMinAgo = Instant.now().minus(4, ChronoUnit.MINUTES);
-            if (latest.get().getTimestamp().isAfter(fourMinAgo)) {
-                return ResponseEntity.ok(Map.of("status", "skipped", "reason", "Too soon since last snapshot"));
-            }
-        }
-
-        OnlineSnapshot snapshot = new OnlineSnapshot(Instant.now(), onlineCount);
-        snapshotRepository.save(snapshot);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("status", "saved"));
-    }
+    // Snapshots are recorded automatically by OnlineSnapshotService every 60s.
+    // This endpoint just serves the chart data.
 
     @GetMapping("/online-history")
     public ResponseEntity<?> getOnlineHistory() {

@@ -12,6 +12,7 @@ export default function AdminPanelPage() {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [actionLoading, setActionLoading] = useState('');
   const [chartData, setChartData] = useState([]);
+  const [chartStats, setChartStats] = useState(null);
   const canvasRef = useRef(null);
 
   function fetchData() {
@@ -28,11 +29,18 @@ export default function AdminPanelPage() {
     fetchData();
   }, []);
 
+  function fetchChartData() {
+    return getOnlineHistory()
+      .then((res) => {
+        setChartData(res.data.points || []);
+        setChartStats({ today: res.data.today, week: res.data.week, month: res.data.month });
+      })
+      .catch(() => {});
+  }
+
   // Load chart history on mount
   useEffect(() => {
-    getOnlineHistory()
-      .then((res) => setChartData(res.data))
-      .catch(() => {});
+    fetchChartData();
   }, []);
 
   // Auto-refresh stats every 30s + refresh chart data every 60s
@@ -43,11 +51,7 @@ export default function AdminPanelPage() {
         .catch(() => {});
     }, 30000);
 
-    const chartInterval = setInterval(() => {
-      getOnlineHistory()
-        .then((res) => setChartData(res.data))
-        .catch(() => {});
-    }, 60000);
+    const chartInterval = setInterval(fetchChartData, 60000);
 
     return () => {
       clearInterval(statsInterval);
@@ -154,17 +158,19 @@ export default function AdminPanelPage() {
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Dots
-    coords.forEach((c) => {
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, 3, 0, Math.PI * 2);
-      ctx.fillStyle = '#10b981';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, 1.5, 0, Math.PI * 2);
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fill();
-    });
+    // Dots — only show when few enough points to not clutter
+    if (coords.length <= 60) {
+      coords.forEach((c) => {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#10b981';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fill();
+      });
+    }
   }, [chartData]);
 
   useEffect(() => {
@@ -268,7 +274,7 @@ export default function AdminPanelPage() {
         </div>
       )}
 
-      {/* Online Users Chart */}
+      {/* Online Users Chart + Stats */}
       <div className="bg-dark-700 border border-dark-600 rounded-lg p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -279,6 +285,34 @@ export default function AdminPanelPage() {
             <span className="text-cream-300/30 text-xs">{chartData.length} datapoints</span>
           )}
         </div>
+
+        {/* Summary stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          {[
+            { label: 'Today', data: chartStats?.today },
+            { label: 'This Week', data: chartStats?.week },
+            { label: 'This Month', data: chartStats?.month },
+          ].map(({ label, data }) => (
+            <div key={label} className="bg-dark-800 border border-dark-600 rounded-lg p-3">
+              <p className="text-cream-300/40 text-[10px] uppercase tracking-wider mb-1.5">{label}</p>
+              {!data || !data.hasData ? (
+                <p className="text-cream-300/25 text-xs">No data</p>
+              ) : (
+                <div className="flex items-baseline gap-3">
+                  <div>
+                    <p className="text-cream-300/40 text-[10px]">Peak</p>
+                    <p className="text-lg font-bold text-emerald-400">{data.peak}</p>
+                  </div>
+                  <div>
+                    <p className="text-cream-300/40 text-[10px]">Avg</p>
+                    <p className="text-lg font-bold text-cream-200">{data.avg}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
         {chartData.length === 0 ? (
           <div className="flex items-center justify-center h-[200px] text-cream-300/30 text-sm">
             No chart data yet — the server records a datapoint every minute automatically

@@ -149,12 +149,54 @@ public class AdminController {
 
     // ── Online Snapshot Endpoints ──────────────────────────────────────
     // Snapshots are recorded automatically by OnlineSnapshotService every 60s.
-    // This endpoint just serves the chart data.
 
     @GetMapping("/online-history")
     public ResponseEntity<?> getOnlineHistory() {
-        Instant cutoff = Instant.now().minus(24, ChronoUnit.HOURS);
-        List<OnlineSnapshot> snapshots = snapshotRepository.findByTimestampAfterOrderByTimestampAsc(cutoff);
-        return ResponseEntity.ok(snapshots);
+        Instant now = Instant.now();
+        Instant cutoff24h = now.minus(24, ChronoUnit.HOURS);
+        List<OnlineSnapshot> snapshots = snapshotRepository.findByTimestampAfterOrderByTimestampAsc(cutoff24h);
+
+        // ── Summary stats ──
+        // Today: from midnight local-ish (use start of UTC day for simplicity)
+        Instant startOfToday = now.truncatedTo(ChronoUnit.DAYS);
+        // This week: 7 days ago
+        Instant startOfWeek = now.minus(7, ChronoUnit.DAYS);
+        // This month: 30 days ago
+        Instant startOfMonth = now.minus(30, ChronoUnit.DAYS);
+
+        Map<String, Object> todayStats = computeStats(snapshots, startOfToday);
+        Map<String, Object> weekStats = computeStats(snapshots, startOfWeek);
+
+        // For month, we need snapshots older than 24h too
+        List<OnlineSnapshot> monthSnapshots = snapshotRepository.findByTimestampAfterOrderByTimestampAsc(startOfMonth);
+        Map<String, Object> monthStats = computeStats(monthSnapshots, startOfMonth);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("points", snapshots);
+        response.put("today", todayStats);
+        response.put("week", weekStats);
+        response.put("month", monthStats);
+
+        return ResponseEntity.ok(response);
+    }
+
+    private Map<String, Object> computeStats(List<OnlineSnapshot> snapshots, Instant after) {
+        List<OnlineSnapshot> filtered = snapshots.stream()
+                .filter(s -> s.getTimestamp().isAfter(after) || s.getTimestamp().equals(after))
+                .toList();
+
+        if (filtered.isEmpty()) {
+            return Map.of("hasData", false);
+        }
+
+        int peak = filtered.stream().mapToInt(OnlineSnapshot::getOnlineCount).max().orElse(0);
+        double avg = filtered.stream().mapToInt(OnlineSnapshot::getOnlineCount).average().orElse(0);
+
+        Map<String, Object> m = new HashMap<>();
+        m.put("hasData", true);
+        m.put("peak", peak);
+        m.put("avg", Math.round(avg * 10.0) / 10.0);
+        m.put("datapoints", filtered.size());
+        return m;
     }
 }

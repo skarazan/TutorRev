@@ -11,13 +11,25 @@ const MONTH_NAMES = [
 ];
 
 export default function RankingsPage() {
-  const [tutorials, setTutorials] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Hydrate from localStorage cache instantly (shares cache with Dashboard)
+  const cached = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('dashboardCache');
+      if (raw) return JSON.parse(raw);
+    } catch { /* ignore */ }
+    return null;
+  }, []);
+
+  const [tutorials, setTutorials] = useState(cached?.tutorials || []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState('');
 
   useEffect(() => {
     getAllTutorials()
-      .then((res) => setTutorials(res.data))
+      .then((res) => {
+        setTutorials(res.data);
+        try { localStorage.setItem('dashboardCache', JSON.stringify({ tutorials: res.data })); } catch { /* quota */ }
+      })
       .catch((err) => setError(err.response?.data?.error || 'Failed to load tutorials'))
       .finally(() => setLoading(false));
   }, []);

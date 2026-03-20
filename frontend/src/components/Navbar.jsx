@@ -30,6 +30,12 @@ export default function Navbar() {
               Dashboard
             </Link>
             <Link
+              to="/rankings"
+              className="text-sm text-cream-300/60 hover:text-cream-200 transition-colors"
+            >
+              Rankings
+            </Link>
+            <Link
               to="/add-tutorial"
               className="text-sm text-cream-300/60 hover:text-cream-200 transition-colors"
             >
@@ -112,6 +118,13 @@ export default function Navbar() {
               className="block px-3 py-2 text-sm text-cream-300/60 hover:text-cream-200 transition-colors"
             >
               Dashboard
+            </Link>
+            <Link
+              to="/rankings"
+              onClick={() => setMenuOpen(false)}
+              className="block px-3 py-2 text-sm text-cream-300/60 hover:text-cream-200 transition-colors"
+            >
+              Rankings
             </Link>
             <Link
               to="/add-tutorial"

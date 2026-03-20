@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage';
 import DevNotesPage from './pages/DevNotesPage';
 import AboutPage from './pages/AboutPage';
 import RulesPage from './pages/RulesPage';
+import RankingsPage from './pages/RankingsPage';
 import AdminPanelPage from './pages/AdminPanelPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -39,6 +40,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<LayoutWithNavbar />}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/rankings" element={<RankingsPage />} />
               <Route path="/tutorials/:id" element={<TutorialDetailPage />} />
               <Route path="/add-tutorial" element={<AddTutorialPage />} />
               <Route path="/profile" element={<ProfilePage />} />

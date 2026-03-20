@@ -14,6 +14,8 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedTopics, setSelectedTopics] = useState([]);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     getAllTutorials()
@@ -85,6 +87,15 @@ export default function DashboardPage() {
       .sort((a, b) => b._avgRating - a._avgRating)
       .slice(0, 5);
   }, [tutorials]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedLevel, selectedTopics]);
+
+  // Paginated slice
+  const totalPages = Math.ceil(filteredTutorials.length / PAGE_SIZE);
+  const paginatedTutorials = filteredTutorials.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function handleTopicToggle(topic) {
     setSelectedTopics((prev) =>
@@ -170,11 +181,38 @@ export default function DashboardPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredTutorials.map((tutorial) => (
-              <TutorialCard key={tutorial.id} tutorial={tutorial} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {paginatedTutorials.map((tutorial) => (
+                <TutorialCard key={tutorial.id} tutorial={tutorial} />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 mt-8">
+                <button
+                  onClick={() => { setPage((p) => p - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  disabled={page === 1}
+                  className="px-4 py-2 text-sm rounded-lg border border-dark-600 text-cream-200
+                             hover:bg-dark-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ← Previous
+                </button>
+                <span className="text-cream-300/50 text-sm">
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => { setPage((p) => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  disabled={page === totalPages}
+                  className="px-4 py-2 text-sm rounded-lg border border-dark-600 text-cream-200
+                             hover:bg-dark-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </>
         )}
     </div>
   );

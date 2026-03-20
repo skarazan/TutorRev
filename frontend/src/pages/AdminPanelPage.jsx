@@ -3,56 +3,61 @@ import { getAdminStats, getAllUsers, getUserProfile, banUser, unbanUser, getOnli
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function AdminPanelPage() {
-  const [stats, setStats] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [selectedProfile, setSelectedProfile] = useState(null);
-  const [actionLoading, setActionLoading] = useState('');
-  // Hydrate chart from localStorage cache instantly
+  // ── Hydrate everything from localStorage cache instantly ──
   const cached = useMemo(() => {
     try {
-      const raw = localStorage.getItem('chartCache');
+      const raw = localStorage.getItem('adminCache');
       if (raw) return JSON.parse(raw);
     } catch { /* ignore */ }
     return null;
   }, []);
 
-  const [chartData, setChartData] = useState(cached?.points || []);
-  const [chartStats, setChartStats] = useState(cached?.stats || null);
+  const [stats, setStats] = useState(cached?.stats || null);
+  const [users, setUsers] = useState(cached?.users || []);
+  const [loading, setLoading] = useState(!cached);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [actionLoading, setActionLoading] = useState('');
+  const [chartData, setChartData] = useState(cached?.chartPoints || []);
+  const [chartStats, setChartStats] = useState(cached?.chartStats || null);
   const canvasRef = useRef(null);
+
+  // Helper to write all cacheable data to localStorage
+  function writeCache(patch) {
+    try {
+      const prev = JSON.parse(localStorage.getItem('adminCache') || '{}');
+      localStorage.setItem('adminCache', JSON.stringify({ ...prev, ...patch }));
+    } catch { /* quota */ }
+  }
 
   function fetchData() {
     return Promise.all([getAdminStats(), getAllUsers()])
       .then(([statsRes, usersRes]) => {
         setStats(statsRes.data);
         setUsers(usersRes.data);
+        writeCache({ stats: statsRes.data, users: usersRes.data });
       })
       .catch(() => setError('Failed to load admin data'))
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   function fetchChartData() {
     return getOnlineHistory()
       .then((res) => {
         const points = res.data.points || [];
-        const stats = { today: res.data.today, week: res.data.week, month: res.data.month };
+        const cStats = { today: res.data.today, week: res.data.week, month: res.data.month };
         setChartData(points);
-        setChartStats(stats);
-        // Cache for instant load next time
-        try { localStorage.setItem('chartCache', JSON.stringify({ points, stats })); } catch { /* quota */ }
+        setChartStats(cStats);
+        writeCache({ chartPoints: points, chartStats: cStats });
       })
       .catch(() => {});
   }
 
-  // Load fresh chart data on mount (renders cached data instantly, then updates)
+  // Load fresh data on mount (renders cached data instantly, then updates)
   useEffect(() => {
+    fetchData();
     fetchChartData();
   }, []);
 
@@ -60,7 +65,10 @@ export default function AdminPanelPage() {
   useEffect(() => {
     const statsInterval = setInterval(() => {
       getAdminStats()
-        .then((res) => setStats(res.data))
+        .then((res) => {
+          setStats(res.data);
+          writeCache({ stats: res.data });
+        })
         .catch(() => {});
     }, 30000);
 

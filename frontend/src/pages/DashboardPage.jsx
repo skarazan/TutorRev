@@ -15,7 +15,7 @@ export default function DashboardPage() {
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedTopics, setSelectedTopics] = useState([]);
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 12;
 
   useEffect(() => {
     getAllTutorials()

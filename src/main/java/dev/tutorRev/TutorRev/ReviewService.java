@@ -7,9 +7,12 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 public class ReviewService {
 
@@ -63,6 +66,7 @@ public class ReviewService {
                 .is((id))).apply(new Update().push("reviewIds").value(review))
                 .first();
 
+        log.info("Review created by user: {} for tutorial: {}", username, id);
         return review;
     }
 
@@ -85,6 +89,7 @@ public class ReviewService {
 
         // Delete the review document itself
         reviewRepository.deleteById(objId);
+        log.info("Review deleted: id={}, tutorial={}, by user: {}{}", reviewId, tutorialId, username, isAdmin ? " (admin)" : "");
     }
 
     public Reviews updateReview(String reviewId, String newBody, int newRating, String username) {
@@ -122,6 +127,7 @@ public class ReviewService {
 
         review.setBody(newBody);
         review.setRating(newRating);
+        log.info("Review updated: id={}, by user: {}", reviewId, username);
         return reviewRepository.save(review);
     }
 

@@ -4,8 +4,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class EmailService {
 
@@ -30,6 +32,7 @@ public class EmailService {
         );
 
         mailSender.send(message);
+        log.info("Verification email sent to: {}", toEmail);
     }
 
     public void sendPasswordChangeCode(String toEmail, String code) {
@@ -47,6 +50,7 @@ public class EmailService {
         );
 
         mailSender.send(message);
+        log.info("Password change code sent to: {}", toEmail);
     }
 
     public void sendPasswordResetCode(String toEmail, String code) {
@@ -64,5 +68,6 @@ public class EmailService {
         );
 
         mailSender.send(message);
+        log.info("Password reset code sent to: {}", toEmail);
     }
 }

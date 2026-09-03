@@ -9,24 +9,14 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
-// WHY THIS CLASS?
-// After Google authenticates a user and redirects back to your app,
-// Spring Security calls this handler. The problem is: Spring Security's
-// default behavior after OAuth2 login is to create a SESSION and redirect
-// to "/". But your API is stateless (no sessions, JWT only). So we need
-// this custom handler to:
-// 1. Check if this Google user already exists in YOUR MongoDB
-// 2. If not, create a new User document in your "users" collection
-// 3. Generate a JWT token for the user
-// 4. Redirect to your frontend with the token
-//
-// Without this class, Google login would succeed but you'd have no way
-// to identify the user on subsequent API calls.
+@Slf4j
 @Component
 public class OAuth2LoginSuccessHandler
         extends SimpleUrlAuthenticationSuccessHandler {
@@ -57,14 +47,15 @@ public class OAuth2LoginSuccessHandler
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             User newUser = new User();
             newUser.setEmail(email);
-            newUser.setUsername(name); // Use Google display name as username
+            newUser.setUsername(name);
             newUser.setProvider("google");
             newUser.setGoogleId(googleId);
             Set<Role> roles = new HashSet<>();
-            roles.add(Role.ROLE_USER);  // Google users get ROLE_USER by default
-            newUser.setEmailVerified(true); // Google already verified their email
+            roles.add(Role.ROLE_USER);
+            newUser.setEmailVerified(true);
             newUser.setRoles(roles);
-            return userRepository.save(newUser); // Save to MongoDB
+            log.info("New Google user created: {}", name);
+            return userRepository.save(newUser);
         });
 
         // Ensure existing Google users are also marked as verified
@@ -73,8 +64,8 @@ public class OAuth2LoginSuccessHandler
             userRepository.save(user);
         }
 
-        // Check if user is banned
         if (user.isBanned()) {
+            log.warn("OAuth login attempt by banned user: {}", user.getUsername());
             response.sendRedirect(frontendUrl + "/login?error=banned");
             return;
         }
@@ -85,6 +76,7 @@ public class OAuth2LoginSuccessHandler
 
         String token = jwtUtil.generateToken(user.getUsername());
 
+        log.info("OAuth login successful: {}", user.getUsername());
         response.sendRedirect(frontendUrl + "/oauth2/callback?token=" + token);
 
     }

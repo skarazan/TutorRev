@@ -7,6 +7,8 @@ import org.springframework.web.client.RestClient;
 
 import org.bson.types.ObjectId;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +16,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 public class TutorialService {
 
@@ -112,6 +115,8 @@ public class TutorialService {
 
         tutorialsRepository.insert(tutorial);
 
+        log.info("Tutorial created: id={}, title='{}', by user: {}", videoId, title, username);
+
         // Step 8: Create the first review and link it to the tutorial
         // This reuses your existing ReviewService.createReview() which:
         //   - inserts the review via reviewRepository.insert()
@@ -135,6 +140,7 @@ public class TutorialService {
 
         // Delete the tutorial itself
         tutorialsRepository.deleteById(tutorial.get_id());
+        log.info("Tutorial deleted: id={}", id);
     }
 
     // Extracts the 11-character video ID from common YouTube URL formats:

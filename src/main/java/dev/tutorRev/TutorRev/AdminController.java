@@ -6,12 +6,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/admin")
 public class AdminController {
@@ -129,6 +132,7 @@ public class AdminController {
         user.setBannedAt(Instant.now());
         userRepository.save(user);
 
+        log.info("User banned: {} by admin: {}", username, authentication.getName());
         return ResponseEntity.ok(Map.of("message", username + " has been banned"));
     }
 
@@ -144,6 +148,7 @@ public class AdminController {
         user.setBannedAt(null);
         userRepository.save(user);
 
+        log.info("User unbanned: {}", username);
         return ResponseEntity.ok(Map.of("message", username + " has been unbanned"));
     }
 

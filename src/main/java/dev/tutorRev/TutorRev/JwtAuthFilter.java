@@ -12,9 +12,12 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 
 
+@Slf4j
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
@@ -43,7 +46,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             try {
                 username = jwtUtil.extractUsername(jwt);
             } catch (Exception e) {
-
+                log.warn("Invalid JWT token: {}", e.getMessage());
             }
         }
 
@@ -59,6 +62,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 // Check if user is banned
                 User user = userRepository.findByUsername(username).orElse(null);
                 if (user != null && user.isBanned()) {
+                    log.info("Blocked request from banned user: {}", username);
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.setContentType("application/json");
                     response.getWriter().write("{\"error\":\"Your account has been banned.\"}");

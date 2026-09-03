@@ -15,12 +15,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -66,6 +69,7 @@ public class AuthController {
                                        HttpServletRequest request) {
         String clientIp = request.getRemoteAddr();
         if (!rateLimitService.tryConsumeByIp("register", clientIp, 5, Duration.ofHours(1))) {
+            log.warn("Registration rate limit hit for IP: {}", clientIp);
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("error", "Too many registration attempts. Please try again later."));
         }
@@ -140,6 +144,7 @@ public class AuthController {
         // Send verification email
         emailService.sendVerificationCode(email, code);
 
+        log.info("User registered: {}", username);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
                     "message", "Registration successful! Check your email for a verification code.",
@@ -328,6 +333,7 @@ public class AuthController {
         user.setVerificationCodeExpiry(null);
         userRepository.save(user);
 
+        log.info("Password reset completed for user: {}", user.getUsername());
         return ResponseEntity.ok(Map.of("message", "Password reset successful! You can now log in."));
     }
 
@@ -350,6 +356,7 @@ public class AuthController {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password));
         } catch (BadCredentialsException e) {
+            log.warn("Failed login attempt for user: {}", username);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Invalid username or password"));
         }
@@ -366,6 +373,7 @@ public class AuthController {
 
         // Check if user is banned
         if (user != null && user.isBanned()) {
+            log.warn("Login attempt by banned user: {}", username);
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Your account has been banned."));
         }
@@ -379,6 +387,7 @@ public class AuthController {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         String token = jwtUtil.generateToken(userDetails.getUsername());
 
+        log.info("User logged in: {}", username);
         return ResponseEntity.ok(Map.of("token", token, "username", username));
     }
 
@@ -491,6 +500,7 @@ public class AuthController {
         // Issue a new JWT with the updated username
         String newToken = jwtUtil.generateToken(newUsername);
 
+        log.info("Username changed: {} -> {}", currentUsername, newUsername);
         return ResponseEntity.ok(Map.of(
                 "message", "Username updated successfully",
                 "username", newUsername,
@@ -576,6 +586,7 @@ public class AuthController {
         user.setVerificationCodeExpiry(null);
         userRepository.save(user);
 
+        log.info("Password changed for user: {}", username);
         return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 
